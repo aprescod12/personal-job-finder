@@ -1,0 +1,91 @@
+{% extends "tracker/base.html" %}
+
+{% block title %}Job Requirements · {{ job.title }}{% endblock %}
+
+{% block content %}
+<p><a class="text-link" href="{% url 'job_detail' job.id %}">← BACK TO {{ job.title|upper }}</a></p>
+
+<section class="requirements-hero">
+    <div>
+        <p class="eyebrow">STAGE 02 / JOB EVIDENCE</p>
+        <h1>STRUCTURED JOB REQUIREMENTS</h1>
+        <p class="requirements-lede">Turn the posting into explicit evidence that the future matcher can compare against your career profile.</p>
+    </div>
+    <div class="requirements-job-stamp">
+        <span>OPPORTUNITY</span>
+        <strong>{{ job.title }}</strong>
+        <small>{{ job.company }}</small>
+    </div>
+</section>
+
+<form method="post" class="requirements-form" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+        <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <section class="requirements-section requirements-section-classify">
+        <div class="requirements-section-index">01</div>
+        <div class="requirements-section-heading">
+            <p>CLASSIFICATION</p>
+            <h2>WHAT KIND OF ROLE IS THIS?</h2>
+            <span>Use broad, reusable categories rather than copying only the exact title.</span>
+        </div>
+        <div class="requirements-form-grid">
+            {% include "tracker/includes/profile_field.html" with field=form.role_family %}
+            {% include "tracker/includes/profile_field.html" with field=form.seniority_level %}
+            {% include "tracker/includes/profile_field.html" with field=form.industry wide=True %}
+            {% include "tracker/includes/profile_field.html" with field=form.minimum_years_experience %}
+            {% include "tracker/includes/profile_field.html" with field=form.maximum_years_experience %}
+        </div>
+    </section>
+
+    <section class="requirements-section requirements-section-skills">
+        <div class="requirements-section-index">02</div>
+        <div class="requirements-section-heading">
+            <p>CAPABILITIES</p>
+            <h2>WHAT MUST THE CANDIDATE KNOW?</h2>
+            <span>Enter one item per line. Duplicate lines are removed automatically.</span>
+        </div>
+        <div class="requirements-form-grid">
+            {% include "tracker/includes/profile_field.html" with field=form.required_skills %}
+            {% include "tracker/includes/profile_field.html" with field=form.preferred_skills %}
+        </div>
+    </section>
+
+    <section class="requirements-section requirements-section-evidence">
+        <div class="requirements-section-index">03</div>
+        <div class="requirements-section-heading">
+            <p>EVIDENCE</p>
+            <h2>WHAT BACKGROUND SUPPORTS THE ROLE?</h2>
+            <span>Separate formal requirements from items that are only preferred.</span>
+        </div>
+        <div class="requirements-form-grid">
+            {% include "tracker/includes/profile_field.html" with field=form.required_education %}
+            {% include "tracker/includes/profile_field.html" with field=form.preferred_education %}
+            {% include "tracker/includes/profile_field.html" with field=form.responsibilities %}
+            {% include "tracker/includes/profile_field.html" with field=form.certifications %}
+        </div>
+    </section>
+
+    <section class="requirements-section requirements-section-blockers">
+        <div class="requirements-section-index">04</div>
+        <div class="requirements-section-heading">
+            <p>ELIGIBILITY</p>
+            <h2>WHAT COULD OVERRIDE A GOOD MATCH?</h2>
+            <span>Record explicit restrictions so a future high score cannot hide a genuine blocker.</span>
+        </div>
+        <div class="requirements-form-grid">
+            {% include "tracker/includes/profile_field.html" with field=form.work_authorization_requirements %}
+            {% include "tracker/includes/profile_field.html" with field=form.hard_disqualifiers %}
+            {% include "tracker/includes/profile_field.html" with field=form.requirement_notes wide=True %}
+        </div>
+    </section>
+
+    <div class="requirements-actions">
+        <button class="button button-primary" type="submit">SAVE REQUIREMENTS</button>
+        <a class="button button-ghost" href="{% url 'job_detail' job.id %}">CANCEL</a>
+        <p>AI extraction is not active yet. These fields are intentionally reviewable and editable.</p>
+    </div>
+</form>
+{% endblock %}
