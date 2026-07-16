@@ -1,18 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Job</title>
-</head>
-<body>
-    <h1>Add a Job</h1>
+{% extends "tracker/base.html" %}
 
-    <form method="post">
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<p><a class="text-link" href="{% if job %}{% url 'job_detail' job.id %}{% else %}{% url 'job_list' %}{% endif %}">← Cancel and go back</a></p>
+
+<section class="form-shell">
+    <div class="page-heading compact">
+        <div>
+            <p class="eyebrow">Opportunity record</p>
+            <h1>{{ page_title }}</h1>
+            <p class="muted">Only the title and company are required. Add more information when it is useful.</p>
+        </div>
+    </div>
+
+    <form method="post" class="panel form-panel" novalidate>
         {% csrf_token %}
-        {{ form.as_p }}
+        {% if form.non_field_errors %}
+            <div class="form-errors">{{ form.non_field_errors }}</div>
+        {% endif %}
 
-        <button type="submit">Save Job</button>
+        <div class="form-grid">
+            {% for field in form %}
+                <div class="form-field {% if field.name == 'description' or field.name == 'notes' or field.name == 'job_url' or field.name == 'next_action' %}full-span{% endif %}">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
+                    {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="form-actions">
+            <button class="button button-primary" type="submit">{{ submit_label }}</button>
+            <a class="button button-ghost" href="{% if job %}{% url 'job_detail' job.id %}{% else %}{% url 'job_list' %}{% endif %}">Cancel</a>
+        </div>
     </form>
-</body>
-</html>
+</section>
+{% endblock %}
