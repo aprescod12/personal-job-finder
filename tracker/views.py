@@ -13,6 +13,7 @@ def job_list(request):
         {"jobs": jobs},
     )
 
+
 def job_detail(request, job_id):
     job = get_object_or_404(JobPosting, id=job_id)
 
@@ -21,6 +22,7 @@ def job_detail(request, job_id):
         "tracker/job_detail.html",
         {"job": job},
     )
+
 
 def job_create(request):
     if request.method == "POST":
@@ -35,5 +37,30 @@ def job_create(request):
     return render(
         request,
         "tracker/job_form.html",
-        {"form": form},
+        {
+            "form": form,
+            "page_title": "Add a Job",
+        },
+    )
+
+
+def job_edit(request, job_id):
+    job = get_object_or_404(JobPosting, id=job_id)
+
+    if request.method == "POST":
+        form = JobPostingForm(request.POST, instance=job)
+
+        if form.is_valid():
+            form.save()
+            return redirect("job_detail", job_id=job.id)
+    else:
+        form = JobPostingForm(instance=job)
+
+    return render(
+        request,
+        "tracker/job_form.html",
+        {
+            "form": form,
+            "page_title": "Edit Job",
+        },
     )
