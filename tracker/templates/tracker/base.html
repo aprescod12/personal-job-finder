@@ -10,8 +10,14 @@
 <body>
     <header class="site-header">
         <div class="container nav-row">
-            <a class="brand" href="{% url 'job_list' %}">Personal Job Finder</a>
-            <a class="button button-primary" href="{% url 'job_create' %}">Add Job</a>
+            <a class="brand" href="{% url 'job_list' %}" aria-label="Personal Job Finder dashboard">
+                <span class="brand-mark">JF</span>
+                <span class="brand-copy">
+                    <strong>PERSONAL JOB FINDER</strong>
+                    <small>CAREER COMMAND CENTER</small>
+                </span>
+            </a>
+            <a class="button button-primary" href="{% url 'job_create' %}">+ ADD JOB</a>
         </div>
     </header>
 
@@ -20,7 +26,10 @@
     </main>
 
     <footer class="site-footer">
-        <div class="container">Stage 1 · Personal job tracking foundation</div>
+        <div class="container footer-row">
+            <span>PERSONAL JOB FINDER / STAGE 01</span>
+            <span class="footer-code">TRACK · PRIORITIZE · ACT</span>
+        </div>
     </footer>
 </body>
 </html>
