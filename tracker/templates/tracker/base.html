@@ -1,0 +1,26 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Personal Job Finder{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'tracker/styles.css' %}">
+</head>
+<body>
+    <header class="site-header">
+        <div class="container nav-row">
+            <a class="brand" href="{% url 'job_list' %}">Personal Job Finder</a>
+            <a class="button button-primary" href="{% url 'job_create' %}">Add Job</a>
+        </div>
+    </header>
+
+    <main class="container page-shell">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">Stage 1 · Personal job tracking foundation</div>
+    </footer>
+</body>
+</html>

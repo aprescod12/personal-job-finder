@@ -1,0 +1,16 @@
+{% extends "tracker/base.html" %}
+
+{% block title %}Delete {{ job.title }}{% endblock %}
+
+{% block content %}
+<section class="confirm-card panel">
+    <p class="eyebrow danger-text">Permanent action</p>
+    <h1>Delete this job?</h1>
+    <p>You are about to remove <strong>{{ job.title }} at {{ job.company }}</strong>. This cannot be undone.</p>
+    <form method="post" class="form-actions">
+        {% csrf_token %}
+        <button class="button button-danger" type="submit">Yes, delete job</button>
+        <a class="button button-ghost" href="{% url 'job_detail' job.id %}">Cancel</a>
+    </form>
+</section>
+{% endblock %}
