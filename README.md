@@ -1,6 +1,6 @@
 # Amiri's Job Finder
 
-A learning-first Django application for collecting, reviewing, and tracking job opportunities. Stage 1 established the reliable job-tracking foundation. Stage 2 adds a structured career profile that will support transparent job-match analysis.
+A learning-first Django application for collecting, reviewing, and tracking job opportunities. Stage 1 established the reliable job-tracking foundation. Stage 2 is building the structured evidence needed for transparent job-match analysis.
 
 ## Current features
 
@@ -16,17 +16,29 @@ A learning-first Django application for collecting, reviewing, and tracking job 
 - Django Admin registration for development and data recovery
 - Automated model and view tests
 
-### Stage 2 — Career profile foundation
+### Stage 2 — Career and requirement foundations
 
 - Maintain one editable personal career profile
-- Store education, skills, target roles, and target industries
-- Record experience level, location preferences, work arrangement, employment type, and minimum salary
-- Separate positive priorities from hard deal-breakers
-- Seed the profile with Amiri's known engineering and biomedical background
+- Store education, skills, target roles, target industries, preferences, priorities, and deal-breakers
+- Maintain one structured requirement set for each job
+- Separate required skills from preferred skills
+- Record role family, seniority, industry, education, experience range, responsibilities, certifications, authorization restrictions, and hard blockers
 - Normalize repeated list entries before saving
-- Use the profile as the future source of truth for job-match scoring
+- Preserve the original job description alongside the reviewed structured interpretation
 
-Match scoring is not active yet. It will be added as the next Stage 2 feature.
+Match scoring is not active yet. The next Stage 2 unit will compare the career profile with these structured job requirements.
+
+## Planned matching strategy
+
+The matcher will not depend only on exact keyword overlap. It will use several layers so related vocabulary can still match:
+
+1. **Exact evidence:** direct matches for important degrees, tools, certifications, and explicit requirements.
+2. **Normalized concepts:** aliases and abbreviations mapped to shared concepts, such as `V&V` and `verification and validation`.
+3. **Role and skill families:** broader relationships between related work such as test engineering, systems verification, validation engineering, and quality engineering.
+4. **Semantic similarity:** meaning-based comparison when profile and posting vocabulary differ.
+5. **AI-assisted extraction:** later agents will convert resumes, LinkedIn profiles, and job descriptions into structured evidence before transparent scoring rules are applied.
+
+The interface should show which evidence caused a match so semantic generalization remains reviewable rather than becoming a hidden black-box score.
 
 ## Local setup
 
@@ -48,17 +60,20 @@ python manage.py test
 
 ## Data model direction
 
-The `JobPosting` and `CareerProfile` models create the shared foundation for later AI workflows:
+The `JobPosting`, `JobRequirement`, and `CareerProfile` models create the shared foundation for later AI workflows:
 
-1. You manually maintain accurate career preferences and background information.
+1. You maintain accurate career preferences and background information.
 2. You save jobs through the web interface.
-3. A transparent scoring service compares each job against the career profile.
-4. A future AI agent can use the same validated models and scoring tools.
+3. You convert each posting into structured, reviewable requirements.
+4. A transparent scoring service compares each job against the career profile.
+5. A future AI agent can use the same validated models and scoring tools.
+6. A document-review agent can analyze your resume and LinkedIn profile, extract supported skills and experiences, and identify credible adjacent career paths.
 
 ## Roadmap
 
-- **Stage 2 next:** structured job requirements and transparent job-match scoring
-- **Stage 3:** tool-using AI agent that reads the profile, analyzes saved jobs, and updates records
-- **Stage 4:** external job discovery, deduplication, scheduled searches, and notifications
+- **Stage 2 next:** vocabulary normalization and transparent job-match scoring
+- **Stage 3:** tool-using AI agents that read the profile, analyze saved jobs, and review resume and LinkedIn content
+- **Stage 3 discovery expansion:** distinguish priority-role matches from adjacent opportunities that fit demonstrated background but are not the stated first choice
+- **Stage 4:** external job discovery, semantic retrieval, deduplication, scheduled searches, and notifications
 
 The agent will not submit applications, contact employers, or change important records without explicit approval.
