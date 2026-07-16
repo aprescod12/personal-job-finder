@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Amiri's Job Finder{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'tracker/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'tracker/profile.css' %}">
 </head>
 <body>
     <header class="site-header">
@@ -17,9 +18,20 @@
                     <small>CAREER COMMAND CENTER</small>
                 </span>
             </a>
-            <a class="button button-primary" href="{% url 'job_create' %}">+ ADD JOB</a>
+            <nav class="nav-actions" aria-label="Primary navigation">
+                <a class="nav-link" href="{% url 'career_profile' %}">CAREER PROFILE</a>
+                <a class="button button-primary" href="{% url 'job_create' %}">+ ADD JOB</a>
+            </nav>
         </div>
     </header>
+
+    {% if messages %}
+        <div class="container message-stack" aria-live="polite">
+            {% for message in messages %}
+                <div class="message message-{{ message.tags|default:'info' }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
 
     <main class="container page-shell">
         {% block content %}{% endblock %}
@@ -27,8 +39,8 @@
 
     <footer class="site-footer">
         <div class="container footer-row">
-            <span>AMIRI'S JOB FINDER / STAGE 01</span>
-            <span class="footer-code">TRACK · PRIORITIZE · ACT</span>
+            <span>AMIRI'S JOB FINDER / STAGE 02</span>
+            <span class="footer-code">PROFILE · TRACK · PRIORITIZE · ACT</span>
         </div>
     </footer>
 </body>

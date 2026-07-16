@@ -1,0 +1,10 @@
+<div class="form-field{% if wide %} full-span{% endif %}">
+    <label for="{{ field.id_for_label }}">{{ field.label|upper }}</label>
+    {{ field }}
+    {% if field.help_text %}
+        <p class="help-text">{{ field.help_text }}</p>
+    {% endif %}
+    {% for error in field.errors %}
+        <p class="field-error">{{ error }}</p>
+    {% endfor %}
+</div>

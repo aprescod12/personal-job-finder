@@ -1,8 +1,10 @@
 # Amiri's Job Finder
 
-A learning-first Django application for collecting, reviewing, and tracking job opportunities. Stage 1 establishes the reliable data and interface layer that a future AI job-finding agent will use.
+A learning-first Django application for collecting, reviewing, and tracking job opportunities. Stage 1 established the reliable job-tracking foundation. Stage 2 adds a structured career profile that will support transparent job-match analysis.
 
-## Stage 1 features
+## Current features
+
+### Stage 1 — Job tracker
 
 - Create, view, edit, and delete job records
 - Track application status from discovery through offer or rejection
@@ -13,6 +15,18 @@ A learning-first Django application for collecting, reviewing, and tracking job 
 - Responsive user interface
 - Django Admin registration for development and data recovery
 - Automated model and view tests
+
+### Stage 2 — Career profile foundation
+
+- Maintain one editable personal career profile
+- Store education, skills, target roles, and target industries
+- Record experience level, location preferences, work arrangement, employment type, and minimum salary
+- Separate positive priorities from hard deal-breakers
+- Seed the profile with Amiri's known engineering and biomedical background
+- Normalize repeated list entries before saving
+- Use the profile as the future source of truth for job-match scoring
+
+Match scoring is not active yet. It will be added as the next Stage 2 feature.
 
 ## Local setup
 
@@ -34,14 +48,16 @@ python manage.py test
 
 ## Data model direction
 
-The `JobPosting` model is the shared foundation for both workflows:
+The `JobPosting` and `CareerProfile` models create the shared foundation for later AI workflows:
 
-1. You can manually save a job through the web interface.
-2. A future AI agent can call a controlled tool that creates the same validated database record.
+1. You manually maintain accurate career preferences and background information.
+2. You save jobs through the web interface.
+3. A transparent scoring service compares each job against the career profile.
+4. A future AI agent can use the same validated models and scoring tools.
 
 ## Roadmap
 
-- **Stage 2:** personal career profile and structured job-match analysis
+- **Stage 2 next:** structured job requirements and transparent job-match scoring
 - **Stage 3:** tool-using AI agent that reads the profile, analyzes saved jobs, and updates records
 - **Stage 4:** external job discovery, deduplication, scheduled searches, and notifications
 

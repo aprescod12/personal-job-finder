@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import JobPosting
+from .models import CareerProfile, JobPosting
 
 
 class JobPostingModelTests(TestCase):
@@ -12,6 +12,21 @@ class JobPostingModelTests(TestCase):
     def test_default_status_is_discovered(self):
         job = JobPosting.objects.create(title="Engineer", company="Example")
         self.assertEqual(job.status, JobPosting.Status.DISCOVERED)
+
+
+class CareerProfileModelTests(TestCase):
+    def test_get_solo_returns_one_profile(self):
+        first_profile = CareerProfile.get_solo()
+        second_profile = CareerProfile.get_solo()
+
+        self.assertEqual(first_profile.pk, 1)
+        self.assertEqual(first_profile.pk, second_profile.pk)
+        self.assertEqual(CareerProfile.objects.count(), 1)
+
+    def test_string_representation(self):
+        profile = CareerProfile.get_solo()
+        profile.full_name = "Amiri Prescod"
+        self.assertEqual(str(profile), "Amiri Prescod's career profile")
 
 
 class JobPostingViewTests(TestCase):
@@ -87,3 +102,44 @@ class JobPostingViewTests(TestCase):
     def test_search_jobs(self):
         response = self.client.get(reverse("job_list"), {"q": "Philadelphia"})
         self.assertContains(response, "Biomedical Engineer")
+
+
+class CareerProfileViewTests(TestCase):
+    def test_profile_page_displays_seeded_background(self):
+        response = self.client.get(reverse("career_profile"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "CAREER PROFILE")
+        self.assertContains(response, "Amiri Prescod")
+        self.assertContains(response, "Biomedical Engineer")
+
+    def test_profile_can_be_updated_without_creating_duplicates(self):
+        response = self.client.post(
+            reverse("career_profile"),
+            {
+                "full_name": "Amiri Prescod",
+                "professional_headline": "Biomedical Engineering Candidate",
+                "education_summary": "Electrical Engineering and Biomedical Engineering",
+                "target_roles": "Systems Engineer\nSystems Engineer\nTest Engineer",
+                "target_industries": "Medical devices",
+                "skills": "Python\nDjango",
+                "experience_level": CareerProfile.ExperienceLevel.ENTRY_LEVEL,
+                "preferred_locations": "Philadelphia, PA",
+                "preferred_work_arrangement": (
+                    CareerProfile.PreferredWorkArrangement.HYBRID
+                ),
+                "preferred_employment_type": JobPosting.EmploymentType.FULL_TIME,
+                "minimum_salary": "70000",
+                "work_authorization": "",
+                "priorities": "Hands-on engineering",
+                "deal_breakers": "",
+                "additional_context": "Interested in medical devices.",
+            },
+        )
+
+        profile = CareerProfile.get_solo()
+        self.assertRedirects(response, reverse("career_profile"))
+        self.assertEqual(CareerProfile.objects.count(), 1)
+        self.assertEqual(profile.professional_headline, "Biomedical Engineering Candidate")
+        self.assertEqual(profile.target_roles, "Systems Engineer\nTest Engineer")
+        self.assertEqual(profile.minimum_salary, 70000)

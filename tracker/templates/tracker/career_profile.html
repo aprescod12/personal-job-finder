@@ -1,0 +1,104 @@
+{% extends "tracker/base.html" %}
+
+{% block title %}Career Profile · Amiri's Job Finder{% endblock %}
+
+{% block content %}
+<section class="profile-hero">
+    <div class="profile-hero-copy">
+        <p class="eyebrow">STAGE 02 / DECISION FOUNDATION</p>
+        <h1>CAREER PROFILE</h1>
+        <p class="profile-intro">
+            This is the structured source of truth for what you bring to the market and what you want next.
+            The job-match system will use these fields instead of relying on vague or repeated prompts.
+        </p>
+    </div>
+    <div class="profile-status-card">
+        <span class="profile-status-dot" aria-hidden="true"></span>
+        <div>
+            <strong>PROFILE ACTIVE</strong>
+            <small>LAST UPDATED {{ profile.updated_at|date:"M j, Y"|upper }}</small>
+        </div>
+    </div>
+</section>
+
+<form method="post" class="career-profile-form" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+        <div class="form-errors profile-form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="profile-sections">
+        <section class="profile-section profile-section-lime">
+            <header class="profile-section-header">
+                <span>01</span>
+                <div>
+                    <p>IDENTITY</p>
+                    <h2>YOUR PROFESSIONAL FOUNDATION</h2>
+                </div>
+            </header>
+            <div class="form-grid profile-form-grid">
+                {% include "tracker/includes/profile_field.html" with field=form.full_name only %}
+                {% include "tracker/includes/profile_field.html" with field=form.experience_level only %}
+                {% include "tracker/includes/profile_field.html" with field=form.professional_headline wide=True only %}
+                {% include "tracker/includes/profile_field.html" with field=form.education_summary wide=True only %}
+            </div>
+        </section>
+
+        <section class="profile-section profile-section-violet">
+            <header class="profile-section-header">
+                <span>02</span>
+                <div>
+                    <p>DIRECTION</p>
+                    <h2>WHERE YOU WANT TO GO</h2>
+                </div>
+            </header>
+            <div class="form-grid profile-form-grid">
+                {% include "tracker/includes/profile_field.html" with field=form.target_roles only %}
+                {% include "tracker/includes/profile_field.html" with field=form.target_industries only %}
+                {% include "tracker/includes/profile_field.html" with field=form.skills wide=True only %}
+            </div>
+        </section>
+
+        <section class="profile-section profile-section-sky">
+            <header class="profile-section-header">
+                <span>03</span>
+                <div>
+                    <p>SEARCH PARAMETERS</p>
+                    <h2>WHAT A VIABLE OPPORTUNITY LOOKS LIKE</h2>
+                </div>
+            </header>
+            <div class="form-grid profile-form-grid">
+                {% include "tracker/includes/profile_field.html" with field=form.preferred_work_arrangement only %}
+                {% include "tracker/includes/profile_field.html" with field=form.preferred_employment_type only %}
+                {% include "tracker/includes/profile_field.html" with field=form.minimum_salary only %}
+                {% include "tracker/includes/profile_field.html" with field=form.work_authorization only %}
+                {% include "tracker/includes/profile_field.html" with field=form.preferred_locations wide=True only %}
+            </div>
+        </section>
+
+        <section class="profile-section profile-section-coral">
+            <header class="profile-section-header">
+                <span>04</span>
+                <div>
+                    <p>DECISION RULES</p>
+                    <h2>WHAT TO PRIORITIZE AND WHAT TO AVOID</h2>
+                </div>
+            </header>
+            <div class="form-grid profile-form-grid">
+                {% include "tracker/includes/profile_field.html" with field=form.priorities only %}
+                {% include "tracker/includes/profile_field.html" with field=form.deal_breakers only %}
+                {% include "tracker/includes/profile_field.html" with field=form.additional_context wide=True only %}
+            </div>
+        </section>
+    </div>
+
+    <div class="profile-save-bar">
+        <div>
+            <strong>SAVE THE SOURCE OF TRUTH</strong>
+            <span>Match scoring is the next Stage 2 feature. It is not active yet.</span>
+        </div>
+        <button class="button button-primary profile-save-button" type="submit">SAVE CAREER PROFILE</button>
+    </div>
+</form>
+{% endblock %}

@@ -1,8 +1,9 @@
+from django.contrib import messages
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import JobPostingForm
-from .models import JobPosting
+from .forms import CareerProfileForm, JobPostingForm
+from .models import CareerProfile, JobPosting
 
 
 def job_list(request):
@@ -34,6 +35,31 @@ def job_list(request):
         "interview_jobs": all_jobs.filter(status=JobPosting.Status.INTERVIEW).count(),
     }
     return render(request, "tracker/job_list.html", context)
+
+
+def career_profile(request):
+    profile = CareerProfile.get_solo()
+
+    if request.method == "POST":
+        form = CareerProfileForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request,
+                "Career profile saved. Future job-match analysis will use this information.",
+            )
+            return redirect("career_profile")
+    else:
+        form = CareerProfileForm(instance=profile)
+
+    return render(
+        request,
+        "tracker/career_profile.html",
+        {
+            "form": form,
+            "profile": profile,
+        },
+    )
 
 
 def job_detail(request, job_id):
