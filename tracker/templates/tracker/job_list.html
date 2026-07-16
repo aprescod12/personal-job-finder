@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saved Jobs</title>
+</head>
+<body>
+    <h1>Saved Jobs</h1>
+
+    <p>
+        <a href="{% url 'job_create' %}">Add a Job</a>
+    </p>
+
+    {% for job in jobs %}
+        <h2>
+            <a href="{% url 'job_detail' job.id %}">
+                {{ job.title }}
+            </a>
+        </h2>
+        <p>{{ job.company }}</p>
+        <p>{{ job.location }}</p>
+    {% empty %}
+        <p>No jobs have been saved yet.</p>
+    {% endfor %}
+</body>
+</html>
