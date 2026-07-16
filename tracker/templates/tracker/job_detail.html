@@ -12,6 +12,7 @@
         <p class="detail-company">{{ job.company }}</p>
     </div>
     <div class="detail-actions">
+        <a class="button button-accent" href="{% url 'job_requirements' job.id %}">JOB REQUIREMENTS</a>
         <a class="button button-secondary" href="{% url 'job_edit' job.id %}">EDIT</a>
         <a class="button button-danger" href="{% url 'job_delete' job.id %}">DELETE</a>
     </div>
@@ -43,6 +44,61 @@
             <div><dt>LAST UPDATED</dt><dd>{{ job.updated_at|date:"M j, Y, g:i a" }}</dd></div>
         </dl>
     </article>
+</section>
+
+<section class="panel requirements-summary prose-section">
+    <div class="requirements-summary-header">
+        <div>
+            <p class="eyebrow">STAGE 02 / STRUCTURED EVIDENCE</p>
+            <h2>JOB REQUIREMENTS</h2>
+        </div>
+        <a class="button button-accent" href="{% url 'job_requirements' job.id %}">
+            {% if requirements and requirements.has_content %}EDIT REQUIREMENTS{% else %}ADD REQUIREMENTS{% endif %}
+        </a>
+    </div>
+
+    {% if requirements and requirements.has_content %}
+        <div class="requirement-facts">
+            <div><span>ROLE FAMILY</span><strong>{{ requirements.role_family|default:"Not classified" }}</strong></div>
+            <div><span>SENIORITY</span><strong>{{ requirements.get_seniority_level_display }}</strong></div>
+            <div><span>INDUSTRY</span><strong>{{ requirements.industry|default:"Not classified" }}</strong></div>
+            <div><span>EXPERIENCE</span><strong>{{ requirements.experience_range }}</strong></div>
+        </div>
+
+        <div class="requirements-display-grid">
+            <article class="requirement-block requirement-required">
+                <h3>REQUIRED SKILLS</h3>
+                <div class="requirement-copy">{{ requirements.required_skills|linebreaksbr|default:"No required skills entered." }}</div>
+            </article>
+            <article class="requirement-block requirement-preferred">
+                <h3>PREFERRED SKILLS</h3>
+                <div class="requirement-copy">{{ requirements.preferred_skills|linebreaksbr|default:"No preferred skills entered." }}</div>
+            </article>
+            <article class="requirement-block">
+                <h3>REQUIRED EDUCATION</h3>
+                <div class="requirement-copy">{{ requirements.required_education|linebreaksbr|default:"Not specified." }}</div>
+            </article>
+            <article class="requirement-block">
+                <h3>CERTIFICATIONS / STANDARDS</h3>
+                <div class="requirement-copy">{{ requirements.certifications|linebreaksbr|default:"None identified." }}</div>
+            </article>
+        </div>
+
+        {% if requirements.hard_disqualifiers %}
+            <div class="blocker-strip">
+                <strong>HARD DISQUALIFIERS</strong>
+                <span>{{ requirements.hard_disqualifiers|linebreaksbr }}</span>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="requirements-empty">
+            <span class="requirements-empty-code">REQ / 00</span>
+            <div>
+                <h3>NO STRUCTURED REQUIREMENTS YET</h3>
+                <p>Convert the posting into explicit skills, education, experience, responsibilities, and blockers before match scoring is introduced.</p>
+            </div>
+        </div>
+    {% endif %}
 </section>
 
 {% if job.description %}
