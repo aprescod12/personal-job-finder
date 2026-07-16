@@ -1,4 +1,4 @@
-# Personal Job Finder
+# Amiri's Job Finder
 
 A learning-first Django application for collecting, reviewing, and tracking job opportunities. Stage 1 establishes the reliable data and interface layer that a future AI job-finding agent will use.
 
