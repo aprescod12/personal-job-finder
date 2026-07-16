@@ -12,6 +12,7 @@
         <p class="detail-company">{{ job.company }}</p>
     </div>
     <div class="detail-actions">
+        <a class="button button-primary" href="{% url 'job_match' job.id %}">MATCH ANALYSIS</a>
         <a class="button button-accent" href="{% url 'job_requirements' job.id %}">JOB REQUIREMENTS</a>
         <a class="button button-secondary" href="{% url 'job_edit' job.id %}">EDIT</a>
         <a class="button button-danger" href="{% url 'job_delete' job.id %}">DELETE</a>
@@ -44,6 +45,40 @@
             <div><dt>LAST UPDATED</dt><dd>{{ job.updated_at|date:"M j, Y, g:i a" }}</dd></div>
         </dl>
     </article>
+</section>
+
+<section class="panel match-summary-card">
+    <div class="match-summary-copy">
+        <p class="eyebrow">STAGE 02 / EXPLAINABLE ANALYSIS</p>
+        <h2>JOB MATCH</h2>
+        {% if match_result.has_requirements %}
+            <p>The score uses your career profile, structured requirements, and explicit vocabulary relationships. Review the evidence before deciding whether to apply.</p>
+            <div class="match-summary-stats">
+                <span>{{ match_result.evidence_coverage }}% COVERAGE</span>
+                <span>{{ match_result.direct_matches|length }} DIRECT</span>
+                <span>{{ match_result.related_matches|length }} RELATED</span>
+                <span>{{ match_result.gaps|length }} GAPS</span>
+            </div>
+        {% else %}
+            <p>Add structured job requirements before generating a trustworthy match score.</p>
+        {% endif %}
+    </div>
+
+    {% if match_result.has_requirements %}
+        <div class="match-summary-result">
+            <div class="match-summary-number">
+                <strong>{{ match_result.score }}</strong>
+                <span>/ 100</span>
+            </div>
+            <div class="match-summary-meta">
+                <strong>{{ match_result.classification }}</strong>
+                <span>{{ match_result.track }}</span>
+                <a class="button button-primary" href="{% url 'job_match' job.id %}">VIEW FULL ANALYSIS</a>
+            </div>
+        </div>
+    {% else %}
+        <a class="button button-accent" href="{% url 'job_requirements' job.id %}">ADD REQUIREMENTS</a>
+    {% endif %}
 </section>
 
 <section class="panel requirements-summary prose-section">
@@ -95,7 +130,7 @@
             <span class="requirements-empty-code">REQ / 00</span>
             <div>
                 <h3>NO STRUCTURED REQUIREMENTS YET</h3>
-                <p>Convert the posting into explicit skills, education, experience, responsibilities, and blockers before match scoring is introduced.</p>
+                <p>Convert the posting into explicit skills, education, experience, responsibilities, and blockers before relying on match analysis.</p>
             </div>
         </div>
     {% endif %}
