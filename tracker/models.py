@@ -64,3 +64,85 @@ class JobPosting(models.Model):
 
     def __str__(self):
         return f"{self.title} at {self.company}"
+
+
+class CareerProfile(models.Model):
+    class ExperienceLevel(models.TextChoices):
+        ENTRY_LEVEL = "entry_level", "Entry level"
+        EARLY_CAREER = "early_career", "Early career (1–3 years)"
+        MID_LEVEL = "mid_level", "Mid level"
+        SENIOR = "senior", "Senior"
+
+    class PreferredWorkArrangement(models.TextChoices):
+        FLEXIBLE = "flexible", "Flexible"
+        ONSITE = "onsite", "On-site"
+        HYBRID = "hybrid", "Hybrid"
+        REMOTE = "remote", "Remote"
+
+    full_name = models.CharField(max_length=200, default="Amiri Prescod")
+    professional_headline = models.CharField(max_length=300, blank=True)
+    education_summary = models.TextField(blank=True)
+
+    target_roles = models.TextField(
+        blank=True,
+        help_text="Enter one target role per line.",
+    )
+    target_industries = models.TextField(
+        blank=True,
+        help_text="Enter one preferred industry per line.",
+    )
+    skills = models.TextField(
+        blank=True,
+        help_text="Enter one skill per line.",
+    )
+
+    experience_level = models.CharField(
+        max_length=20,
+        choices=ExperienceLevel.choices,
+        default=ExperienceLevel.ENTRY_LEVEL,
+    )
+    preferred_locations = models.TextField(
+        blank=True,
+        help_text="Enter one acceptable location per line.",
+    )
+    preferred_work_arrangement = models.CharField(
+        max_length=20,
+        choices=PreferredWorkArrangement.choices,
+        default=PreferredWorkArrangement.FLEXIBLE,
+    )
+    preferred_employment_type = models.CharField(
+        max_length=20,
+        choices=JobPosting.EmploymentType.choices,
+        default=JobPosting.EmploymentType.FULL_TIME,
+    )
+    minimum_salary = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Optional minimum annual salary in U.S. dollars.",
+    )
+    work_authorization = models.CharField(max_length=300, blank=True)
+
+    priorities = models.TextField(
+        blank=True,
+        help_text="Enter one priority per line.",
+    )
+    deal_breakers = models.TextField(
+        blank=True,
+        help_text="Enter one non-negotiable or disqualifier per line.",
+    )
+    additional_context = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "career profile"
+        verbose_name_plural = "career profile"
+
+    @classmethod
+    def get_solo(cls):
+        profile, _ = cls.objects.get_or_create(pk=1)
+        return profile
+
+    def __str__(self):
+        return f"{self.full_name}'s career profile"
