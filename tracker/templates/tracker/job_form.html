@@ -3,12 +3,12 @@
 {% block title %}{{ page_title }}{% endblock %}
 
 {% block content %}
-<p><a class="text-link" href="{% if job %}{% url 'job_detail' job.id %}{% else %}{% url 'job_list' %}{% endif %}">← Cancel and go back</a></p>
+<p><a class="text-link" href="{% if job %}{% url 'job_detail' job.id %}{% else %}{% url 'job_list' %}{% endif %}">← CANCEL AND GO BACK</a></p>
 
 <section class="form-shell">
     <div class="page-heading compact">
         <div>
-            <p class="eyebrow">Opportunity record</p>
+            <p class="eyebrow">OPPORTUNITY RECORD</p>
             <h1>{{ page_title }}</h1>
             <p class="muted">Only the title and company are required. Add more information when it is useful.</p>
         </div>
@@ -33,7 +33,7 @@
 
         <div class="form-actions">
             <button class="button button-primary" type="submit">{{ submit_label }}</button>
-            <a class="button button-ghost" href="{% if job %}{% url 'job_detail' job.id %}{% else %}{% url 'job_list' %}{% endif %}">Cancel</a>
+            <a class="button button-ghost" href="{% if job %}{% url 'job_detail' job.id %}{% else %}{% url 'job_list' %}{% endif %}">CANCEL</a>
         </div>
     </form>
 </section>
