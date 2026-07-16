@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -64,6 +65,123 @@ class JobPosting(models.Model):
 
     def __str__(self):
         return f"{self.title} at {self.company}"
+
+
+class JobRequirement(models.Model):
+    class SeniorityLevel(models.TextChoices):
+        UNKNOWN = "unknown", "Not specified"
+        INTERNSHIP = "internship", "Internship / student"
+        ENTRY_LEVEL = "entry_level", "Entry level"
+        EARLY_CAREER = "early_career", "Early career"
+        MID_LEVEL = "mid_level", "Mid level"
+        SENIOR = "senior", "Senior"
+        LEAD_MANAGER = "lead_manager", "Lead / manager"
+
+    job = models.OneToOneField(
+        JobPosting,
+        on_delete=models.CASCADE,
+        related_name="requirements",
+    )
+    role_family = models.CharField(max_length=200, blank=True)
+    seniority_level = models.CharField(
+        max_length=20,
+        choices=SeniorityLevel.choices,
+        default=SeniorityLevel.UNKNOWN,
+    )
+    industry = models.CharField(max_length=200, blank=True)
+
+    required_skills = models.TextField(
+        blank=True,
+        help_text="Enter one required skill per line.",
+    )
+    preferred_skills = models.TextField(
+        blank=True,
+        help_text="Enter one preferred skill per line.",
+    )
+    required_education = models.TextField(
+        blank=True,
+        help_text="Enter one acceptable required degree or field per line.",
+    )
+    preferred_education = models.TextField(
+        blank=True,
+        help_text="Enter one preferred degree or field per line.",
+    )
+    minimum_years_experience = models.PositiveSmallIntegerField(null=True, blank=True)
+    maximum_years_experience = models.PositiveSmallIntegerField(null=True, blank=True)
+    responsibilities = models.TextField(
+        blank=True,
+        help_text="Enter one responsibility per line.",
+    )
+    certifications = models.TextField(
+        blank=True,
+        help_text="Enter one certification or standard per line.",
+    )
+    work_authorization_requirements = models.TextField(blank=True)
+    hard_disqualifiers = models.TextField(
+        blank=True,
+        help_text="Enter one explicit blocker per line.",
+    )
+    requirement_notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "job requirement set"
+        verbose_name_plural = "job requirement sets"
+
+    def clean(self):
+        super().clean()
+        if (
+            self.minimum_years_experience is not None
+            and self.maximum_years_experience is not None
+            and self.maximum_years_experience < self.minimum_years_experience
+        ):
+            raise ValidationError(
+                {
+                    "maximum_years_experience": (
+                        "Maximum experience cannot be lower than minimum experience."
+                    )
+                }
+            )
+
+    @property
+    def has_content(self):
+        text_fields = (
+            self.role_family,
+            self.industry,
+            self.required_skills,
+            self.preferred_skills,
+            self.required_education,
+            self.preferred_education,
+            self.responsibilities,
+            self.certifications,
+            self.work_authorization_requirements,
+            self.hard_disqualifiers,
+            self.requirement_notes,
+        )
+        return bool(
+            any(value.strip() for value in text_fields)
+            or self.seniority_level != self.SeniorityLevel.UNKNOWN
+            or self.minimum_years_experience is not None
+            or self.maximum_years_experience is not None
+        )
+
+    @property
+    def experience_range(self):
+        minimum = self.minimum_years_experience
+        maximum = self.maximum_years_experience
+
+        if minimum is not None and maximum is not None:
+            return f"{minimum}–{maximum} years"
+        if minimum is not None:
+            return f"{minimum}+ years"
+        if maximum is not None:
+            return f"Up to {maximum} years"
+        return "Not specified"
+
+    def __str__(self):
+        return f"Requirements for {self.job}"
 
 
 class CareerProfile(models.Model):

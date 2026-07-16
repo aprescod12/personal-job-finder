@@ -1,7 +1,8 @@
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import CareerProfile, JobPosting
+from .models import CareerProfile, JobPosting, JobRequirement
 
 
 class JobPostingModelTests(TestCase):
@@ -12,6 +13,30 @@ class JobPostingModelTests(TestCase):
     def test_default_status_is_discovered(self):
         job = JobPosting.objects.create(title="Engineer", company="Example")
         self.assertEqual(job.status, JobPosting.Status.DISCOVERED)
+
+
+class JobRequirementModelTests(TestCase):
+    def setUp(self):
+        self.job = JobPosting.objects.create(
+            title="Validation Engineer",
+            company="Device Company",
+        )
+
+    def test_blank_requirement_has_no_content(self):
+        requirements = JobRequirement(job=self.job)
+
+        self.assertFalse(requirements.has_content)
+        self.assertEqual(requirements.experience_range, "Not specified")
+
+    def test_experience_range_validation(self):
+        requirements = JobRequirement(
+            job=self.job,
+            minimum_years_experience=3,
+            maximum_years_experience=1,
+        )
+
+        with self.assertRaises(ValidationError):
+            requirements.full_clean()
 
 
 class CareerProfileModelTests(TestCase):
@@ -48,6 +73,7 @@ class JobPostingViewTests(TestCase):
         response = self.client.get(reverse("job_detail", args=[self.job.id]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Biomedical Engineer")
+        self.assertContains(response, "JOB REQUIREMENTS")
 
     def test_create_job(self):
         response = self.client.post(
@@ -62,6 +88,7 @@ class JobPostingViewTests(TestCase):
         )
         created_job = JobPosting.objects.get(title="Systems Engineer")
         self.assertRedirects(response, reverse("job_detail", args=[created_job.id]))
+        self.assertTrue(JobRequirement.objects.filter(job=created_job).exists())
 
     def test_edit_job(self):
         response = self.client.post(
@@ -103,6 +130,49 @@ class JobPostingViewTests(TestCase):
         response = self.client.get(reverse("job_list"), {"q": "Philadelphia"})
         self.assertContains(response, "Biomedical Engineer")
 
+    def test_requirements_can_be_saved_and_lists_are_normalized(self):
+        response = self.client.post(
+            reverse("job_requirements", args=[self.job.id]),
+            {
+                "role_family": "Verification and Validation Engineering",
+                "seniority_level": JobRequirement.SeniorityLevel.ENTRY_LEVEL,
+                "industry": "Medical devices",
+                "required_skills": "MATLAB\nMATLAB\nTest protocols",
+                "preferred_skills": "ISO 13485",
+                "required_education": "Electrical Engineering",
+                "preferred_education": "Biomedical Engineering",
+                "minimum_years_experience": "0",
+                "maximum_years_experience": "2",
+                "responsibilities": "Write protocols\nExecute tests",
+                "certifications": "FDA design controls",
+                "work_authorization_requirements": "",
+                "hard_disqualifiers": "Active clearance required",
+                "requirement_notes": "Manual review of posting.",
+            },
+        )
+
+        self.assertRedirects(response, reverse("job_detail", args=[self.job.id]))
+        requirements = JobRequirement.objects.get(job=self.job)
+        self.assertEqual(requirements.required_skills, "MATLAB\nTest protocols")
+        self.assertEqual(requirements.experience_range, "0–2 years")
+
+    def test_invalid_experience_range_is_rejected(self):
+        response = self.client.post(
+            reverse("job_requirements", args=[self.job.id]),
+            {
+                "role_family": "Test Engineering",
+                "seniority_level": JobRequirement.SeniorityLevel.ENTRY_LEVEL,
+                "minimum_years_experience": "4",
+                "maximum_years_experience": "2",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Maximum experience cannot be lower than minimum experience",
+        )
+
 
 class CareerProfileViewTests(TestCase):
     def test_profile_page_displays_seeded_background(self):
@@ -140,6 +210,9 @@ class CareerProfileViewTests(TestCase):
         profile = CareerProfile.get_solo()
         self.assertRedirects(response, reverse("career_profile"))
         self.assertEqual(CareerProfile.objects.count(), 1)
-        self.assertEqual(profile.professional_headline, "Biomedical Engineering Candidate")
+        self.assertEqual(
+            profile.professional_headline,
+            "Biomedical Engineering Candidate",
+        )
         self.assertEqual(profile.target_roles, "Systems Engineer\nTest Engineer")
         self.assertEqual(profile.minimum_salary, 70000)

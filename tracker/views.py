@@ -2,8 +2,8 @@ from django.contrib import messages
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import CareerProfileForm, JobPostingForm
-from .models import CareerProfile, JobPosting
+from .forms import CareerProfileForm, JobPostingForm, JobRequirementForm
+from .models import CareerProfile, JobPosting, JobRequirement
 
 
 def job_list(request):
@@ -32,7 +32,9 @@ def job_list(request):
         "total_jobs": all_jobs.count(),
         "saved_jobs": all_jobs.filter(status=JobPosting.Status.SAVED).count(),
         "applied_jobs": all_jobs.filter(status=JobPosting.Status.APPLIED).count(),
-        "interview_jobs": all_jobs.filter(status=JobPosting.Status.INTERVIEW).count(),
+        "interview_jobs": all_jobs.filter(
+            status=JobPosting.Status.INTERVIEW
+        ).count(),
     }
     return render(request, "tracker/job_list.html", context)
 
@@ -64,7 +66,39 @@ def career_profile(request):
 
 def job_detail(request, job_id):
     job = get_object_or_404(JobPosting, id=job_id)
-    return render(request, "tracker/job_detail.html", {"job": job})
+    requirements = JobRequirement.objects.filter(job=job).first()
+    return render(
+        request,
+        "tracker/job_detail.html",
+        {
+            "job": job,
+            "requirements": requirements,
+        },
+    )
+
+
+def job_requirements(request, job_id):
+    job = get_object_or_404(JobPosting, id=job_id)
+    requirements, _ = JobRequirement.objects.get_or_create(job=job)
+
+    if request.method == "POST":
+        form = JobRequirementForm(request.POST, instance=requirements)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Structured job requirements saved.")
+            return redirect("job_detail", job_id=job.id)
+    else:
+        form = JobRequirementForm(instance=requirements)
+
+    return render(
+        request,
+        "tracker/job_requirements.html",
+        {
+            "job": job,
+            "requirements": requirements,
+            "form": form,
+        },
+    )
 
 
 def job_create(request):
@@ -72,6 +106,7 @@ def job_create(request):
         form = JobPostingForm(request.POST)
         if form.is_valid():
             job = form.save()
+            JobRequirement.objects.get_or_create(job=job)
             return redirect("job_detail", job_id=job.id)
     else:
         form = JobPostingForm()
