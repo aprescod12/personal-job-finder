@@ -3,7 +3,7 @@
 {% block title %}{{ job.title }} · {{ job.company }}{% endblock %}
 
 {% block content %}
-<p><a class="text-link" href="{% url 'job_list' %}">← Back to dashboard</a></p>
+<p><a class="text-link" href="{% url 'job_list' %}">← BACK TO DASHBOARD</a></p>
 
 <section class="detail-header panel">
     <div>
@@ -12,49 +12,49 @@
         <p class="detail-company">{{ job.company }}</p>
     </div>
     <div class="detail-actions">
-        <a class="button button-secondary" href="{% url 'job_edit' job.id %}">Edit</a>
-        <a class="button button-danger" href="{% url 'job_delete' job.id %}">Delete</a>
+        <a class="button button-secondary" href="{% url 'job_edit' job.id %}">EDIT</a>
+        <a class="button button-danger" href="{% url 'job_delete' job.id %}">DELETE</a>
     </div>
 </section>
 
 <section class="detail-grid">
     <article class="panel">
-        <h2>Opportunity details</h2>
+        <h2>OPPORTUNITY DETAILS</h2>
         <dl class="detail-list">
-            <div><dt>Location</dt><dd>{{ job.location|default:"Not provided" }}</dd></div>
-            <div><dt>Employment type</dt><dd>{{ job.get_employment_type_display }}</dd></div>
-            <div><dt>Work arrangement</dt><dd>{{ job.get_work_arrangement_display }}</dd></div>
-            <div><dt>Salary</dt><dd>{{ job.salary_text|default:"Not provided" }}</dd></div>
-            <div><dt>Source</dt><dd>{{ job.source|default:"Not provided" }}</dd></div>
-            <div><dt>Date posted</dt><dd>{{ job.date_posted|date:"M j, Y"|default:"Not provided" }}</dd></div>
-            <div><dt>Deadline</dt><dd>{{ job.application_deadline|date:"M j, Y"|default:"Not provided" }}</dd></div>
+            <div><dt>LOCATION</dt><dd>{{ job.location|default:"Not provided" }}</dd></div>
+            <div><dt>EMPLOYMENT TYPE</dt><dd>{{ job.get_employment_type_display }}</dd></div>
+            <div><dt>WORK ARRANGEMENT</dt><dd>{{ job.get_work_arrangement_display }}</dd></div>
+            <div><dt>SALARY</dt><dd>{{ job.salary_text|default:"Not provided" }}</dd></div>
+            <div><dt>SOURCE</dt><dd>{{ job.source|default:"Not provided" }}</dd></div>
+            <div><dt>DATE POSTED</dt><dd>{{ job.date_posted|date:"M j, Y"|default:"Not provided" }}</dd></div>
+            <div><dt>DEADLINE</dt><dd>{{ job.application_deadline|date:"M j, Y"|default:"Not provided" }}</dd></div>
         </dl>
         {% if job.job_url %}
-            <a class="button button-primary full-width" href="{{ job.job_url }}" target="_blank" rel="noopener noreferrer">Open original posting</a>
+            <a class="button button-primary full-width" href="{{ job.job_url }}" target="_blank" rel="noopener noreferrer">OPEN ORIGINAL POSTING</a>
         {% endif %}
     </article>
 
     <article class="panel">
-        <h2>Application plan</h2>
+        <h2>APPLICATION PLAN</h2>
         <dl class="detail-list">
-            <div><dt>Status</dt><dd>{{ job.get_status_display }}</dd></div>
-            <div><dt>Next action</dt><dd>{{ job.next_action|default:"No next action set" }}</dd></div>
-            <div><dt>Action date</dt><dd>{{ job.next_action_date|date:"M j, Y"|default:"Not scheduled" }}</dd></div>
-            <div><dt>Last updated</dt><dd>{{ job.updated_at|date:"M j, Y, g:i a" }}</dd></div>
+            <div><dt>STATUS</dt><dd>{{ job.get_status_display }}</dd></div>
+            <div><dt>NEXT ACTION</dt><dd>{{ job.next_action|default:"No next action set" }}</dd></div>
+            <div><dt>ACTION DATE</dt><dd>{{ job.next_action_date|date:"M j, Y"|default:"Not scheduled" }}</dd></div>
+            <div><dt>LAST UPDATED</dt><dd>{{ job.updated_at|date:"M j, Y, g:i a" }}</dd></div>
         </dl>
     </article>
 </section>
 
 {% if job.description %}
 <section class="panel prose-section">
-    <h2>Job description</h2>
+    <h2>JOB DESCRIPTION</h2>
     {{ job.description|linebreaks }}
 </section>
 {% endif %}
 
 {% if job.notes %}
 <section class="panel prose-section">
-    <h2>Notes</h2>
+    <h2>NOTES</h2>
     {{ job.notes|linebreaks }}
 </section>
 {% endif %}
