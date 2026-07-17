@@ -1,0 +1,200 @@
+.inline-action-form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.inline-action-form .button {
+    width: 100%;
+}
+
+.verification-history-panel,
+.verification-run-scope,
+.verification-evidence-panel,
+.verification-run-next-step {
+    margin-bottom: 24px;
+}
+
+.verification-history-heading,
+.verification-run-scope,
+.verification-run-next-step {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 22px;
+    align-items: start;
+}
+
+.verification-history-heading h2,
+.verification-run-scope h2,
+.verification-run-next-step h2,
+.verification-evidence-panel h2 {
+    margin: 5px 0 10px;
+}
+
+.verification-history-heading p,
+.verification-run-scope p,
+.verification-run-next-step p,
+.verification-evidence-panel p {
+    margin-bottom: 0;
+}
+
+.verification-history-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.verification-history-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    gap: 14px;
+    align-items: center;
+    border: 2px solid var(--ink);
+    padding: 13px;
+    background: rgba(255, 255, 255, 0.78);
+}
+
+.verification-history-row > div,
+.verification-run-status,
+.verification-scope-badge,
+.verification-structured-grid > div {
+    display: grid;
+    gap: 3px;
+}
+
+.verification-history-row span,
+.verification-run-status span,
+.verification-run-status small,
+.verification-scope-badge span,
+.verification-structured-grid span {
+    color: var(--muted);
+    font-size: 0.65rem;
+    font-weight: 850;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.verification-history-row strong,
+.verification-run-status strong,
+.verification-scope-badge strong,
+.verification-structured-grid strong {
+    font-size: 0.86rem;
+    text-transform: uppercase;
+}
+
+.verification-history-row small {
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.verification-history-empty {
+    display: grid;
+    gap: 6px;
+    margin-top: 20px;
+    border: 2px dashed var(--ink);
+    padding: 18px;
+    text-align: center;
+}
+
+.verification-run-heading {
+    align-items: stretch;
+}
+
+.verification-run-status {
+    min-width: 230px;
+    border: 3px solid var(--ink);
+    padding: 16px;
+    box-shadow: 5px 5px 0 var(--ink);
+}
+
+.verification-run-status-completed {
+    background: var(--lime);
+}
+
+.verification-run-status-needs_review,
+.verification-run-status-pending,
+.verification-run-status-running {
+    background: var(--sky);
+}
+
+.verification-run-status-failed {
+    background: var(--coral);
+}
+
+.verification-scope-badge {
+    max-width: 280px;
+    border: 3px solid var(--ink);
+    background: var(--sky);
+    padding: 15px;
+    box-shadow: 5px 5px 0 var(--ink);
+}
+
+.verification-run-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+    margin-bottom: 24px;
+}
+
+.verification-run-grid .panel {
+    margin-bottom: 0;
+}
+
+.verification-error-block {
+    display: grid;
+    gap: 5px;
+    margin-top: 18px;
+    border: 3px solid var(--ink);
+    background: var(--coral);
+    padding: 14px;
+}
+
+.verification-error-block strong {
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+}
+
+.verification-structured-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.verification-structured-grid > div {
+    border: 2px solid var(--ink);
+    background: rgba(255, 255, 255, 0.78);
+    padding: 12px;
+}
+
+@media (max-width: 900px) {
+    .verification-history-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .verification-history-row .text-link {
+        justify-self: start;
+    }
+}
+
+@media (max-width: 720px) {
+    .verification-history-heading,
+    .verification-run-scope,
+    .verification-run-next-step,
+    .verification-run-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .verification-run-status,
+    .verification-scope-badge {
+        min-width: 0;
+        max-width: none;
+    }
+}
+
+@media (max-width: 520px) {
+    .verification-history-row,
+    .verification-structured-grid {
+        grid-template-columns: 1fr;
+    }
+}
