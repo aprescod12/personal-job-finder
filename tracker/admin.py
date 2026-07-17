@@ -27,15 +27,31 @@ class JobPostingAdmin(admin.ModelAdmin):
     list_display = (
         "title",
         "company",
+        "listing_status",
+        "listing_last_verified",
+        "deadline_status",
+        "application_deadline",
         "status",
         "location",
         "employment_type",
-        "work_arrangement",
-        "application_deadline",
         "updated_at",
     )
-    list_filter = ("status", "employment_type", "work_arrangement")
-    search_fields = ("title", "company", "location", "description", "notes")
+    list_filter = (
+        "listing_status",
+        "deadline_status",
+        "status",
+        "employment_type",
+        "work_arrangement",
+    )
+    search_fields = (
+        "title",
+        "company",
+        "location",
+        "job_url",
+        "description",
+        "listing_verification_notes",
+        "notes",
+    )
     date_hierarchy = "created_at"
     inlines = (JobRequirementInline, JobCalibrationInline)
 
