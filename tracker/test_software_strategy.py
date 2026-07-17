@@ -2,6 +2,9 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .models import CareerProfile, JobPosting, JobRequirement
+from .services.semantic_strategy_matching import (
+    MATCHER_VERSION as ACTIVE_MATCHER_VERSION,
+)
 from .services.software_strategy_matching import (
     MATCHER_VERSION,
     analyze_job_match,
@@ -145,7 +148,7 @@ class SoftwareStrategyTests(TestCase):
         )
         self.assertEqual(
             rendered_job.match_result.matcher_version,
-            MATCHER_VERSION,
+            ACTIVE_MATCHER_VERSION,
         )
         self.assertEqual(
             rendered_job.match_result.track,

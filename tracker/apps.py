@@ -9,11 +9,11 @@ class TrackerConfig(AppConfig):
         """Register the current calibrated matcher for application-wide use."""
 
         from .services import strategy_matching
-        from .services.software_strategy_matching import (
-            analyze_job_match as analyze_software_aware_match,
+        from .services.semantic_strategy_matching import (
+            analyze_job_match as analyze_controlled_semantic_match,
         )
 
         # Views and existing integrations import from strategy_matching. Keeping
         # this stable facade lets the active strategy evolve without duplicating
         # matching calls throughout the application.
-        strategy_matching.analyze_job_match = analyze_software_aware_match
+        strategy_matching.analyze_job_match = analyze_controlled_semantic_match
