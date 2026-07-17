@@ -121,3 +121,7 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Stage 4 job-intake extraction provider. A future AI provider can replace this
+# dotted class path without changing the intake views or human review workflow.
+JOB_INTAKE_EXTRACTOR = "tracker.services.job_intake.DeterministicJobExtractor"
