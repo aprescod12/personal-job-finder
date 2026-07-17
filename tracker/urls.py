@@ -2,6 +2,7 @@ from django.urls import path
 
 from . import views
 from .calibration_views import calibration_report, weight_model_comparison
+from .verification_views import run_job_verification, verification_run_detail
 
 
 urlpatterns = [
@@ -19,6 +20,16 @@ urlpatterns = [
         "jobs/<int:job_id>/verify/",
         views.job_listing_verify,
         name="job_listing_verify",
+    ),
+    path(
+        "jobs/<int:job_id>/verification/run/",
+        run_job_verification,
+        name="run_job_verification",
+    ),
+    path(
+        "jobs/<int:job_id>/verification/runs/<int:run_id>/",
+        verification_run_detail,
+        name="verification_run_detail",
     ),
     path("jobs/<int:job_id>/match/", views.job_match, name="job_match"),
     path(
