@@ -10,7 +10,8 @@
         <p class="eyebrow">STAGE 02 / TRANSPARENT MATCHER</p>
         <h1>MATCH ANALYSIS</h1>
         <p class="match-job-name">{{ job.title }} · {{ job.company }}</p>
-        <p class="muted">This result uses explicit rules, normalized vocabulary, and the evidence stored in your career profile. It does not use an LLM.</p>
+        <p class="muted">This result uses explicit rules, normalized vocabulary, documented role relationships, and a capped local semantic layer. It does not use an LLM or external API.</p>
+        {% if match_result.matcher_version %}<p class="match-version">MATCHER {{ match_result.matcher_version }}</p>{% endif %}
     </div>
 
     {% if match_result.has_requirements %}
@@ -34,7 +35,7 @@
         <div>
             <p class="eyebrow">HUMAN-IN-THE-LOOP CALIBRATION</p>
             <h2>RECORD YOUR OWN JUDGMENT</h2>
-            <p>Judge this opportunity independently. Your review is saved with a snapshot of the current score so later weight and vocabulary changes can be evaluated against real examples.</p>
+            <p>Judge this opportunity independently. Your review is saved with a snapshot of the current score so later weight, vocabulary, and semantic changes can be evaluated against real examples.</p>
         </div>
         {% if calibration %}
             <div class="calibration-status{% if calibration.agreement_status == 'ALIGNED' %} calibration-status-aligned{% elif calibration.agreement_status == 'REVIEW' %} calibration-status-review{% else %} calibration-status-evidence{% endif %}">
@@ -109,7 +110,7 @@
     </div>
 </section>
 {% else %}
-<section class="match-overview-grid">
+<section class="match-overview-grid match-overview-grid-semantic">
     <article class="panel match-overview-card">
         <span>EVIDENCE COVERAGE</span>
         <strong>{{ match_result.evidence_coverage }}%</strong>
@@ -123,7 +124,12 @@
     <article class="panel match-overview-card">
         <span>RELATED MATCHES</span>
         <strong>{{ match_result.related_matches|length }}</strong>
-        <p>Transferable evidence is relevant but not identical.</p>
+        <p>A documented transferable relationship supports the requirement.</p>
+    </article>
+    <article class="panel match-overview-card match-overview-semantic">
+        <span>SEMANTIC MATCHES</span>
+        <strong>{{ match_result.semantic_matches|length }}</strong>
+        <p>A controlled local comparison found related meaning with capped credit.</p>
     </article>
     <article class="panel match-overview-card">
         <span>GAPS</span>
@@ -190,13 +196,29 @@
                     <small>{{ item.concept }}</small>
                 </div>
             {% empty %}
-                <p class="muted">No related matches identified.</p>
+                <p class="muted">No rule-based related matches identified.</p>
             {% endfor %}
         </div>
     </article>
 </section>
 
 <section class="match-evidence-grid">
+    <article class="panel match-section match-semantic-section">
+        <p class="eyebrow">CONTROLLED MEANING MATCH</p>
+        <h2>SEMANTIC EVIDENCE</h2>
+        <div class="match-evidence-list">
+            {% for item in match_result.semantic_matches %}
+                <div class="match-evidence-item match-semantic-item">
+                    <strong>{{ item.requirement }}</strong>
+                    <span>{{ item.evidence }}</span>
+                    <small>{{ item.concept }} · CAPPED STRENGTH {{ item.strength|floatformat:2 }}</small>
+                </div>
+            {% empty %}
+                <p class="muted">No controlled semantic matches identified.</p>
+            {% endfor %}
+        </div>
+    </article>
+
     <article class="panel match-section match-gap-section">
         <p class="eyebrow">MISSING EVIDENCE</p>
         <h2>GAPS</h2>
@@ -211,34 +233,34 @@
             {% endfor %}
         </div>
     </article>
+</section>
 
-    <article class="panel match-section match-blocker-section">
-        <p class="eyebrow">ELIGIBILITY REVIEW</p>
-        <h2>BLOCKERS TO REVIEW</h2>
-        <div class="match-evidence-list">
-            {% for blocker in match_result.confirmed_blockers %}
-                <div class="match-evidence-item match-blocker-confirmed">
-                    <strong>CONFIRMED CONFLICT</strong>
-                    <span>{{ blocker }}</span>
-                </div>
-            {% endfor %}
-            {% for blocker in match_result.review_blockers %}
-                <div class="match-evidence-item">
-                    <strong>VERIFY MANUALLY</strong>
-                    <span>{{ blocker }}</span>
-                </div>
-            {% empty %}
-                {% if not match_result.confirmed_blockers %}
-                    <p class="muted">No blockers identified.</p>
-                {% endif %}
-            {% endfor %}
-        </div>
-    </article>
+<section class="panel match-section match-blocker-section">
+    <p class="eyebrow">ELIGIBILITY REVIEW</p>
+    <h2>BLOCKERS TO REVIEW</h2>
+    <div class="match-evidence-list">
+        {% for blocker in match_result.confirmed_blockers %}
+            <div class="match-evidence-item match-blocker-confirmed">
+                <strong>CONFIRMED CONFLICT</strong>
+                <span>{{ blocker }}</span>
+            </div>
+        {% endfor %}
+        {% for blocker in match_result.review_blockers %}
+            <div class="match-evidence-item">
+                <strong>VERIFY MANUALLY</strong>
+                <span>{{ blocker }}</span>
+            </div>
+        {% empty %}
+            {% if not match_result.confirmed_blockers %}
+                <p class="muted">No blockers identified.</p>
+            {% endif %}
+        {% endfor %}
+    </div>
 </section>
 
 <section class="panel match-method-note">
     <h2>HOW TO READ THIS RESULT</h2>
-    <p><strong>Direct</strong> means explicit or alias-normalized evidence was found. <strong>Related</strong> means the system found a documented transferable relationship. <strong>Missing</strong> means the profile currently contains no supported evidence. The score should guide review, not replace your judgment.</p>
+    <p><strong>Direct</strong> means explicit or alias-normalized evidence was found. <strong>Related</strong> means a documented transferable relationship was found. <strong>Semantic</strong> means a local, version-controlled concept-family comparison found related meaning; its credit is capped and it can never satisfy experience, authorization, certification, clearance, licensing, or another hard requirement. <strong>Missing</strong> means the profile currently contains no supported evidence. The score should guide review, not replace your judgment.</p>
 </section>
 {% endif %}
 {% endblock %}
