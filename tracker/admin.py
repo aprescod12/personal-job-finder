@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import CareerProfile, JobCalibration, JobPosting, JobRequirement
+from .models import (
+    CareerProfile,
+    JobCalibration,
+    JobPosting,
+    JobRequirement,
+    ListingVerificationRun,
+)
 
 
 class JobRequirementInline(admin.StackedInline):
@@ -20,6 +26,25 @@ class JobCalibrationInline(admin.StackedInline):
         "created_at",
         "updated_at",
     )
+
+
+class ListingVerificationRunInline(admin.TabularInline):
+    model = ListingVerificationRun
+    extra = 0
+    can_delete = False
+    show_change_link = True
+    fields = (
+        "created_at",
+        "trigger",
+        "status",
+        "detected_listing_status",
+        "confidence",
+        "review_status",
+    )
+    readonly_fields = fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(JobPosting)
@@ -53,7 +78,11 @@ class JobPostingAdmin(admin.ModelAdmin):
         "notes",
     )
     date_hierarchy = "created_at"
-    inlines = (JobRequirementInline, JobCalibrationInline)
+    inlines = (
+        JobRequirementInline,
+        JobCalibrationInline,
+        ListingVerificationRunInline,
+    )
 
 
 @admin.register(JobRequirement)
@@ -97,6 +126,65 @@ class JobCalibrationAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
+
+
+@admin.register(ListingVerificationRun)
+class ListingVerificationRunAdmin(admin.ModelAdmin):
+    list_display = (
+        "job",
+        "status",
+        "detected_listing_status",
+        "confidence",
+        "review_status",
+        "trigger",
+        "created_at",
+    )
+    list_filter = (
+        "status",
+        "detected_listing_status",
+        "confidence",
+        "review_status",
+        "trigger",
+    )
+    search_fields = (
+        "job__title",
+        "job__company",
+        "requested_url",
+        "final_url",
+        "detected_job_title",
+        "detected_company",
+        "evidence",
+        "error_message",
+    )
+    date_hierarchy = "created_at"
+    readonly_fields = (
+        "job",
+        "trigger",
+        "status",
+        "requested_url",
+        "final_url",
+        "http_status_code",
+        "detected_job_title",
+        "detected_company",
+        "detected_listing_status",
+        "detected_deadline_status",
+        "detected_deadline",
+        "apply_action_found",
+        "confidence",
+        "evidence",
+        "error_message",
+        "structured_evidence",
+        "verifier_version",
+        "started_at",
+        "completed_at",
+        "created_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(CareerProfile)
