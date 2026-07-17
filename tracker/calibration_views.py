@@ -102,5 +102,8 @@ def weight_model_comparison(request):
     return render(
         request,
         "tracker/weight_model_comparison.html",
-        {"comparison": comparison},
+        {
+            "comparison": comparison,
+            "models": (comparison.model_a, comparison.model_b),
+        },
     )
