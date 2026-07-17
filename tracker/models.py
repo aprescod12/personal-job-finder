@@ -485,3 +485,137 @@ class CareerProfile(models.Model):
 
     def __str__(self):
         return f"{self.full_name}'s career profile"
+
+
+class ListingVerificationRun(models.Model):
+    class Trigger(models.TextChoices):
+        MANUAL = "manual", "Manual request"
+        AGENT = "agent", "Verification agent"
+        SCHEDULED = "scheduled", "Scheduled check"
+
+    class RunStatus(models.TextChoices):
+        PENDING = "pending", "Pending"
+        RUNNING = "running", "Running"
+        COMPLETED = "completed", "Completed"
+        NEEDS_REVIEW = "needs_review", "Needs manual review"
+        FAILED = "failed", "Failed"
+
+    class Confidence(models.TextChoices):
+        UNKNOWN = "unknown", "Not assessed"
+        LOW = "low", "Low"
+        MEDIUM = "medium", "Medium"
+        HIGH = "high", "High"
+
+    class ReviewStatus(models.TextChoices):
+        NOT_REQUIRED = "not_required", "Not required"
+        PENDING = "pending", "Pending review"
+        ACCEPTED = "accepted", "Accepted"
+        REJECTED = "rejected", "Rejected"
+
+    job = models.ForeignKey(
+        JobPosting,
+        on_delete=models.CASCADE,
+        related_name="verification_runs",
+    )
+    trigger = models.CharField(
+        max_length=20,
+        choices=Trigger.choices,
+        default=Trigger.MANUAL,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=RunStatus.choices,
+        default=RunStatus.PENDING,
+    )
+
+    requested_url = models.URLField(max_length=1000, blank=True)
+    final_url = models.URLField(max_length=1000, blank=True)
+    http_status_code = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    detected_job_title = models.CharField(max_length=300, blank=True)
+    detected_company = models.CharField(max_length=300, blank=True)
+    detected_listing_status = models.CharField(
+        max_length=20,
+        choices=JobPosting.ListingStatus.choices,
+        default=JobPosting.ListingStatus.UNVERIFIED,
+    )
+    detected_deadline_status = models.CharField(
+        max_length=20,
+        choices=JobPosting.DeadlineStatus.choices,
+        default=JobPosting.DeadlineStatus.UNKNOWN,
+    )
+    detected_deadline = models.DateField(null=True, blank=True)
+    apply_action_found = models.BooleanField(null=True, blank=True)
+
+    confidence = models.CharField(
+        max_length=20,
+        choices=Confidence.choices,
+        default=Confidence.UNKNOWN,
+    )
+    review_status = models.CharField(
+        max_length=20,
+        choices=ReviewStatus.choices,
+        default=ReviewStatus.NOT_REQUIRED,
+    )
+    evidence = models.TextField(blank=True)
+    error_message = models.TextField(blank=True)
+    structured_evidence = models.JSONField(default=dict, blank=True)
+    verifier_version = models.CharField(max_length=100, blank=True)
+
+    started_at = models.DateTimeField(default=timezone.now)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["job", "-created_at"],
+                name="verify_job_created_idx",
+            ),
+            models.Index(
+                fields=["status", "-created_at"],
+                name="verify_status_created_idx",
+            ),
+        ]
+        verbose_name = "listing verification run"
+        verbose_name_plural = "listing verification runs"
+
+    def clean(self):
+        super().clean()
+        if (
+            self.detected_deadline_status
+            == JobPosting.DeadlineStatus.CONFIRMED
+            and not self.detected_deadline
+        ):
+            raise ValidationError(
+                {
+                    "detected_deadline": (
+                        "Enter the deadline detected by the verification run."
+                    )
+                }
+            )
+
+    @property
+    def is_finished(self):
+        return self.status in {
+            self.RunStatus.COMPLETED,
+            self.RunStatus.NEEDS_REVIEW,
+            self.RunStatus.FAILED,
+        }
+
+    @property
+    def needs_manual_review(self):
+        return (
+            self.status == self.RunStatus.NEEDS_REVIEW
+            or self.review_status == self.ReviewStatus.PENDING
+        )
+
+    @property
+    def duration_seconds(self):
+        if not self.completed_at:
+            return None
+        return max(0.0, (self.completed_at - self.started_at).total_seconds())
+
+    def __str__(self):
+        return f"Verification run for {self.job} at {self.created_at:%Y-%m-%d %H:%M}"
