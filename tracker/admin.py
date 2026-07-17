@@ -1,11 +1,17 @@
 from django.contrib import admin
 
-from .models import CareerProfile, JobPosting, JobRequirement
+from .models import CareerProfile, JobPosting, JobRequirement, MatchCalibration
 
 
 class JobRequirementInline(admin.StackedInline):
     model = JobRequirement
     extra = 1
+    max_num = 1
+
+
+class MatchCalibrationInline(admin.StackedInline):
+    model = MatchCalibration
+    extra = 0
     max_num = 1
 
 
@@ -24,7 +30,7 @@ class JobPostingAdmin(admin.ModelAdmin):
     list_filter = ("status", "employment_type", "work_arrangement")
     search_fields = ("title", "company", "location", "description", "notes")
     date_hierarchy = "created_at"
-    inlines = (JobRequirementInline,)
+    inlines = (JobRequirementInline, MatchCalibrationInline)
 
 
 @admin.register(JobRequirement)
@@ -46,6 +52,14 @@ class JobRequirementAdmin(admin.ModelAdmin):
         "preferred_skills",
     )
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(MatchCalibration)
+class MatchCalibrationAdmin(admin.ModelAdmin):
+    list_display = ("job", "verdict", "reviewed_at")
+    list_filter = ("verdict",)
+    search_fields = ("job__title", "job__company", "notes")
+    readonly_fields = ("created_at", "reviewed_at")
 
 
 @admin.register(CareerProfile)
