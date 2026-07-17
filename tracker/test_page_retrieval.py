@@ -1,7 +1,9 @@
 from email.message import Message
 from io import BytesIO
 import socket
+import ssl
 from urllib.error import URLError
+from urllib.request import HTTPSHandler
 
 from django.test import SimpleTestCase
 
@@ -10,6 +12,7 @@ from .services.page_retrieval import (
     RetrievalNetworkError,
     RetrievalPolicy,
     RetrievalResponseTooLarge,
+    RetrievalTlsError,
     UnsafeRetrievalTarget,
 )
 
@@ -68,6 +71,20 @@ class FakeOpener:
 
 
 class ControlledHttpRetrieverTests(SimpleTestCase):
+    def test_default_opener_uses_verified_ca_bundle(self):
+        retriever = ControlledHttpRetriever()
+        https_handlers = [
+            handler
+            for handler in retriever.opener.handlers
+            if isinstance(handler, HTTPSHandler)
+        ]
+
+        self.assertEqual(len(https_handlers), 1)
+        context = https_handlers[0]._context
+        self.assertTrue(context.check_hostname)
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+        self.assertGreater(context.cert_store_stats()["x509_ca"], 0)
+
     def test_successful_html_retrieval_records_bounded_text_and_hash(self):
         body = b"<html><title>Test Engineer</title></html>"
         opener = FakeOpener(
@@ -248,3 +265,19 @@ class ControlledHttpRetrieverTests(SimpleTestCase):
             retriever.retrieve("https://careers.example.com/jobs/123")
 
         self.assertIn("could not be reached", str(error.exception))
+
+    def test_certificate_failure_is_reported_with_install_guidance(self):
+        certificate_error = ssl.SSLCertVerificationError(
+            1,
+            "certificate verify failed",
+        )
+        opener = FakeOpener(error=URLError(certificate_error))
+        retriever = ControlledHttpRetriever(
+            opener=opener,
+            resolver=public_resolver,
+        )
+
+        with self.assertRaises(RetrievalTlsError) as error:
+            retriever.retrieve("https://careers.example.com/jobs/123")
+
+        self.assertIn("Install the project requirements again", str(error.exception))

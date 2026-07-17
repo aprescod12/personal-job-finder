@@ -4,10 +4,19 @@ from dataclasses import dataclass, field
 from hashlib import sha256
 import ipaddress
 import socket
+import ssl
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse, urlunparse
-from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
+from urllib.request import (
+    HTTPRedirectHandler,
+    HTTPSHandler,
+    ProxyHandler,
+    Request,
+    build_opener,
+)
+
+import certifi
 
 
 class PageRetrievalError(RuntimeError):
@@ -20,6 +29,10 @@ class UnsafeRetrievalTarget(PageRetrievalError):
 
 class RetrievalNetworkError(PageRetrievalError):
     """Raised when a public employer page cannot be reached safely."""
+
+
+class RetrievalTlsError(RetrievalNetworkError):
+    """Raised when a public HTTPS page cannot be verified securely."""
 
 
 class RetrievalRedirectError(PageRetrievalError):
@@ -65,6 +78,28 @@ class _NoRedirectHandler(HTTPRedirectHandler):
         return None
 
 
+def _verified_https_context() -> ssl.SSLContext:
+    """Build a verified TLS context with a portable CA bundle.
+
+    Browser trust stores and Python trust stores are not always configured the same
+    way on macOS. Using certifi keeps certificate verification enabled while making
+    local development consistent with CI and deployed environments.
+    """
+
+    context = ssl.create_default_context(cafile=certifi.where())
+    context.check_hostname = True
+    context.verify_mode = ssl.CERT_REQUIRED
+    return context
+
+
+def _default_opener():
+    return build_opener(
+        ProxyHandler({}),
+        HTTPSHandler(context=_verified_https_context()),
+        _NoRedirectHandler(),
+    )
+
+
 class ControlledHttpRetriever:
     """Retrieve one public HTTP(S) page under strict, auditable limits.
 
@@ -84,10 +119,7 @@ class ControlledHttpRetriever:
         resolver: Callable[..., Any] | None = None,
     ):
         self.policy = policy or RetrievalPolicy()
-        self.opener = opener or build_opener(
-            ProxyHandler({}),
-            _NoRedirectHandler(),
-        )
+        self.opener = opener or _default_opener()
         self.resolver = resolver or socket.getaddrinfo
 
     def retrieve(self, raw_url: str) -> RetrievedPage:
@@ -162,10 +194,27 @@ class ControlledHttpRetriever:
             raise RetrievalNetworkError(
                 f"The employer page timed out after {self.policy.timeout_seconds:g} seconds."
             ) from exc
+        except ssl.SSLCertVerificationError as exc:
+            raise RetrievalTlsError(
+                "HTTPS certificate verification failed. Install the project requirements "
+                "again so the trusted certificate bundle is available."
+            ) from exc
         except URLError as exc:
-            reason = str(getattr(exc, "reason", exc))
+            reason = getattr(exc, "reason", exc)
+            if isinstance(reason, ssl.SSLCertVerificationError) or (
+                isinstance(reason, ssl.SSLError)
+                and "CERTIFICATE_VERIFY_FAILED" in str(reason)
+            ):
+                raise RetrievalTlsError(
+                    "HTTPS certificate verification failed. Install the project requirements "
+                    "again so the trusted certificate bundle is available."
+                ) from exc
             raise RetrievalNetworkError(
-                f"The employer page could not be reached: {reason[:300]}"
+                f"The employer page could not be reached: {str(reason)[:300]}"
+            ) from exc
+        except ssl.SSLError as exc:
+            raise RetrievalTlsError(
+                f"The employer page could not establish a verified HTTPS connection: {str(exc)[:300]}"
             ) from exc
         except OSError as exc:
             raise RetrievalNetworkError(
@@ -282,7 +331,7 @@ class ControlledHttpRetriever:
                 body = response.read(self.policy.max_response_bytes + 1)
             except socket.timeout as exc:
                 raise RetrievalNetworkError(
-                    f"The employer page timed out while reading its response."
+                    "The employer page timed out while reading its response."
                 ) from exc
             except OSError as exc:
                 raise RetrievalNetworkError(
