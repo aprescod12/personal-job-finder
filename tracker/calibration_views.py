@@ -2,6 +2,7 @@ from django.shortcuts import render
 
 from .models import CareerProfile, JobCalibration
 from .services.calibration_reporting import build_calibration_report
+from .services.weight_model_comparison import build_weight_model_comparison
 from .validation_batch import (
     CALIBRATION_SOURCE,
     VALIDATION_BATCH,
@@ -89,4 +90,17 @@ def calibration_report(request):
             "validation_total": len(VALIDATION_BATCH),
             "validation_complete": validation_reviewed >= len(VALIDATION_BATCH),
         },
+    )
+
+
+def weight_model_comparison(request):
+    profile = CareerProfile.get_solo()
+    comparison = build_weight_model_comparison(
+        profile,
+        expected_count=len(VALIDATION_BATCH),
+    )
+    return render(
+        request,
+        "tracker/weight_model_comparison.html",
+        {"comparison": comparison},
     )
