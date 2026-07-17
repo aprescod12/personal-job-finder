@@ -12,6 +12,11 @@ from .forms import (
 )
 from .models import CareerProfile, JobCalibration, JobPosting, JobRequirement
 from .services.strategy_matching import analyze_job_match
+from .validation_batch import (
+    CALIBRATION_SOURCE,
+    VALIDATION_SOURCE,
+    is_blind_validation,
+)
 
 
 FIT_FILTER_CHOICES = (
@@ -36,6 +41,13 @@ REVIEW_FILTER_CHOICES = (
     ("unreviewed", "Not yet reviewed"),
     ("aligned", "Matcher aligned"),
     ("disagree", "Matcher differs"),
+)
+
+SOURCE_FILTER_CHOICES = (
+    ("", "All job sources"),
+    ("validation", "Validation holdout"),
+    ("calibration", "Original calibration batch"),
+    ("other", "Manual and other jobs"),
 )
 
 SORT_CHOICES = (
@@ -76,6 +88,10 @@ def _attach_match_data(jobs, profile):
         requirement = requirements.get(job.id)
         job.match_result = analyze_job_match(profile, job, requirement)
         job.calibration_record = calibrations.get(job.id)
+        job.blind_validation = is_blind_validation(
+            job,
+            job.calibration_record,
+        )
 
     return jobs
 
@@ -87,7 +103,8 @@ def _filter_by_fit(jobs, selected_fit):
     return [
         job
         for job in jobs
-        if job.match_result.classification in classifications
+        if job.blind_validation
+        or job.match_result.classification in classifications
     ]
 
 
@@ -95,7 +112,11 @@ def _filter_by_track(jobs, selected_track):
     track = TRACK_VALUES.get(selected_track)
     if not track:
         return jobs
-    return [job for job in jobs if job.match_result.track == track]
+    return [
+        job
+        for job in jobs
+        if job.blind_validation or job.match_result.track == track
+    ]
 
 
 def _filter_by_review(jobs, selected_review):
@@ -125,6 +146,7 @@ def _sort_jobs(jobs, selected_sort):
         return sorted(
             jobs,
             key=lambda job: (
+                not job.blind_validation,
                 not job.match_result.is_disqualified,
                 job.match_result.has_requirements,
                 job.match_result.score,
@@ -137,6 +159,7 @@ def _sort_jobs(jobs, selected_sort):
         return sorted(
             jobs,
             key=lambda job: (
+                job.blind_validation,
                 not job.match_result.has_requirements,
                 job.match_result.score,
                 job.company.casefold(),
@@ -159,6 +182,18 @@ def _sort_jobs(jobs, selected_sort):
     return jobs
 
 
+def _filter_source(queryset, selected_source):
+    if selected_source == "validation":
+        return queryset.filter(source=VALIDATION_SOURCE)
+    if selected_source == "calibration":
+        return queryset.filter(source=CALIBRATION_SOURCE)
+    if selected_source == "other":
+        return queryset.exclude(
+            source__in=(CALIBRATION_SOURCE, VALIDATION_SOURCE)
+        )
+    return queryset
+
+
 def job_list(request):
     all_jobs = JobPosting.objects.all()
     filtered_jobs = all_jobs
@@ -168,6 +203,7 @@ def job_list(request):
     selected_fit = request.GET.get("fit", "").strip()
     selected_track = request.GET.get("track", "").strip()
     selected_review = request.GET.get("review", "").strip()
+    selected_source = request.GET.get("source", "").strip()
     selected_sort = request.GET.get("sort", "newest").strip()
 
     if query:
@@ -176,6 +212,7 @@ def job_list(request):
             | Q(company__icontains=query)
             | Q(location__icontains=query)
             | Q(description__icontains=query)
+            | Q(source__icontains=query)
             | Q(requirements__role_family__icontains=query)
             | Q(requirements__industry__icontains=query)
             | Q(requirements__required_skills__icontains=query)
@@ -190,6 +227,7 @@ def job_list(request):
     valid_fit_values = {value for value, _ in FIT_FILTER_CHOICES}
     valid_track_values = {value for value, _ in TRACK_FILTER_CHOICES}
     valid_review_values = {value for value, _ in REVIEW_FILTER_CHOICES}
+    valid_source_values = {value for value, _ in SOURCE_FILTER_CHOICES}
     valid_sort_values = {value for value, _ in SORT_CHOICES}
 
     if selected_fit not in valid_fit_values:
@@ -198,22 +236,39 @@ def job_list(request):
         selected_track = ""
     if selected_review not in valid_review_values:
         selected_review = ""
+    if selected_source not in valid_source_values:
+        selected_source = ""
     if selected_sort not in valid_sort_values:
         selected_sort = "newest"
+
+    filtered_jobs = _filter_source(filtered_jobs, selected_source)
 
     profile = CareerProfile.get_solo()
     jobs = _attach_match_data(list(filtered_jobs), profile)
     jobs = _filter_by_fit(jobs, selected_fit)
     jobs = _filter_by_track(jobs, selected_track)
     jobs = _filter_by_review(jobs, selected_review)
+
+    blind_sort_reset = False
+    if any(job.blind_validation for job in jobs) and selected_sort in {
+        "match_high",
+        "match_low",
+    }:
+        selected_sort = "company"
+        blind_sort_reset = True
+
     jobs = _sort_jobs(jobs, selected_sort)
 
-    analyzed_count = sum(job.match_result.has_requirements for job in jobs)
+    visible_jobs = [job for job in jobs if not job.blind_validation]
+    analyzed_count = sum(
+        job.match_result.has_requirements for job in visible_jobs
+    )
     strong_count = sum(
         job.match_result.classification in {"STRONG MATCH", "GOOD MATCH"}
-        for job in jobs
+        for job in visible_jobs
     )
     reviewed_count = sum(bool(job.calibration_record) for job in jobs)
+    blind_count = sum(job.blind_validation for job in jobs)
 
     context = {
         "jobs": jobs,
@@ -222,16 +277,20 @@ def job_list(request):
         "selected_fit": selected_fit,
         "selected_track": selected_track,
         "selected_review": selected_review,
+        "selected_source": selected_source,
         "selected_sort": selected_sort,
         "status_choices": JobPosting.Status.choices,
         "fit_filter_choices": FIT_FILTER_CHOICES,
         "track_filter_choices": TRACK_FILTER_CHOICES,
         "review_filter_choices": REVIEW_FILTER_CHOICES,
+        "source_filter_choices": SOURCE_FILTER_CHOICES,
         "sort_choices": SORT_CHOICES,
         "total_jobs": all_jobs.count(),
         "analyzed_jobs": analyzed_count,
         "strong_jobs": strong_count,
         "reviewed_jobs": reviewed_count,
+        "blind_jobs": blind_count,
+        "blind_sort_reset": blind_sort_reset,
     }
     return render(request, "tracker/job_list.html", context)
 
@@ -267,6 +326,7 @@ def job_detail(request, job_id):
     profile = CareerProfile.get_solo()
     match_result = analyze_job_match(profile, job, requirements)
     calibration = JobCalibration.objects.filter(job=job).first()
+    blind_validation = is_blind_validation(job, calibration)
 
     return render(
         request,
@@ -276,6 +336,7 @@ def job_detail(request, job_id):
             "requirements": requirements,
             "match_result": match_result,
             "calibration": calibration,
+            "blind_validation": blind_validation,
         },
     )
 
@@ -286,6 +347,7 @@ def job_match(request, job_id):
     profile = CareerProfile.get_solo()
     match_result = analyze_job_match(profile, job, requirements)
     calibration = JobCalibration.objects.filter(job=job).first()
+    blind_validation = is_blind_validation(job, calibration)
 
     if request.method == "POST":
         calibration_form = JobCalibrationForm(
@@ -303,7 +365,11 @@ def job_match(request, job_id):
             calibration.save()
             messages.success(
                 request,
-                "Your calibration judgment was saved with the current matcher result.",
+                (
+                    "Blind validation judgment saved. The matcher result is now revealed."
+                    if blind_validation
+                    else "Your calibration judgment was saved with the current matcher result."
+                ),
             )
             return redirect("job_match", job_id=job.id)
     else:
@@ -319,6 +385,7 @@ def job_match(request, job_id):
             "match_result": match_result,
             "calibration": calibration,
             "calibration_form": calibration_form,
+            "blind_validation": blind_validation,
         },
     )
 
