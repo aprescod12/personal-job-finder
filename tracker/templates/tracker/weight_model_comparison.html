@@ -33,7 +33,7 @@
 </section>
 
 <section class="weight-model-grid">
-    {% for model in comparison.model_a comparison.model_b %}
+    {% for model in models %}
     <article class="panel weight-model-card{% if comparison.recommended_model_key == model.model_key %} weight-model-recommended{% endif %}">
         <div class="weight-model-heading">
             <div>
