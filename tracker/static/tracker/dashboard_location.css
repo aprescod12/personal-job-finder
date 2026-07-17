@@ -1,0 +1,19 @@
+.simplified-dashboard .compact-job-heading {
+    display: block;
+}
+
+.simplified-dashboard .compact-location {
+    display: block;
+    max-width: none;
+    margin-top: 0.35rem;
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: var(--muted, #5f6672);
+}
+
+.simplified-dashboard .compact-location::before {
+    content: "LOCATION · ";
+    color: var(--ink, #171b22);
+}
