@@ -12,6 +12,9 @@ from .services.semantic_strategy_matching import (
 )
 
 
+SEMANTIC_REQUIREMENT = "Patient monitoring data-acquisition architecture"
+
+
 class ControlledSemanticSimilarityTests(TestCase):
     def setUp(self):
         self.profile = CareerProfile.get_solo()
@@ -44,7 +47,7 @@ class ControlledSemanticSimilarityTests(TestCase):
         self,
         *,
         title="Biomedical Product Engineer",
-        required_skills="Diagnostic instrumentation and signal acquisition systems",
+        required_skills=SEMANTIC_REQUIREMENT,
         minimum_years_experience=0,
         work_authorization_requirements="",
         hard_disqualifiers="",
@@ -75,8 +78,7 @@ class ControlledSemanticSimilarityTests(TestCase):
         semantic = next(
             item
             for item in result.semantic_matches
-            if item.requirement
-            == "Diagnostic instrumentation and signal acquisition systems"
+            if item.requirement == SEMANTIC_REQUIREMENT
         )
         required_category = next(
             category
@@ -93,8 +95,7 @@ class ControlledSemanticSimilarityTests(TestCase):
         self.assertGreater(required_category.percent, 0)
         self.assertFalse(
             any(
-                gap.requirement
-                == "Diagnostic instrumentation and signal acquisition systems"
+                gap.requirement == SEMANTIC_REQUIREMENT
                 for gap in result.gaps
             )
         )
@@ -103,16 +104,24 @@ class ControlledSemanticSimilarityTests(TestCase):
         job, requirements = self.make_job()
 
         result = analyze_job_match(self.profile, job, requirements)
-        requirement = "Diagnostic instrumentation and signal acquisition systems"
 
         self.assertFalse(
-            any(item.requirement == requirement for item in result.direct_matches)
+            any(
+                item.requirement == SEMANTIC_REQUIREMENT
+                for item in result.direct_matches
+            )
         )
         self.assertFalse(
-            any(item.requirement == requirement for item in result.related_matches)
+            any(
+                item.requirement == SEMANTIC_REQUIREMENT
+                for item in result.related_matches
+            )
         )
         self.assertTrue(
-            any(item.requirement == requirement for item in result.semantic_matches)
+            any(
+                item.requirement == SEMANTIC_REQUIREMENT
+                for item in result.semantic_matches
+            )
         )
 
     def test_experience_requirement_is_not_semantically_overridden(self):
