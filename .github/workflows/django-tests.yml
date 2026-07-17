@@ -30,15 +30,4 @@ jobs:
         run: python manage.py check
 
       - name: Run tests
-        run: |
-          python manage.py test > test-output.txt 2>&1 || {
-            cat test-output.txt
-            exit 1
-          }
-
-      - name: Upload diagnostic test output
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dashboard-test-output
-          path: test-output.txt
+        run: python manage.py test
