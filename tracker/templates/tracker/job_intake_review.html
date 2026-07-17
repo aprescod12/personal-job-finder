@@ -1,0 +1,73 @@
+{% extends "tracker/base.html" %}
+{% load static %}
+
+{% block title %}Review Job Intake{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'tracker/job_intake.css' %}">
+<p><a class="text-link" href="{% url 'job_intake_start' %}">← EDIT PASTED LISTING</a></p>
+
+<section class="page-heading intake-heading">
+    <div>
+        <p class="eyebrow">STAGE 04 / HUMAN REVIEW GATE</p>
+        <h1>VERIFY THE DRAFT BEFORE IT ENTERS YOUR PIPELINE.</h1>
+        <p class="muted">Correct every missing or inaccurate field before creating the job and calculating a match score.</p>
+    </div>
+    <div class="intake-boundary-card">
+        <span>PARSER</span>
+        <strong>{{ extraction.parser_version|upper }}</strong>
+        <small>No job has been created yet.</small>
+    </div>
+</section>
+
+<section class="panel intake-evidence-panel">
+    <div><p class="eyebrow">EXTRACTION EVIDENCE</p><h2>WHAT WAS DETECTED</h2></div>
+    <div class="intake-evidence-grid">
+        <article>
+            <span>DETECTED</span>
+            {% if extraction.evidence %}<ul>{% for item in extraction.evidence %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<strong>No reliable labeled fields detected.</strong>{% endif %}
+        </article>
+        <article>
+            <span>WARNINGS</span>
+            {% if extraction.warnings %}<ul>{% for item in extraction.warnings %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<strong>No parser warnings.</strong>{% endif %}
+        </article>
+    </div>
+</section>
+
+<form method="post" class="intake-review-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="field-error">{{ form.non_field_errors }}</div>{% endif %}
+
+    <section class="panel intake-review-section">
+        <div class="intake-section-heading"><div><p class="eyebrow">01 / REVIEW ALL FIELDS</p><h2>JOB AND REQUIREMENT DRAFT</h2></div><span>Nothing is saved until approval</span></div>
+        <div class="intake-text-grid">
+            {% for field in form %}
+                <div class="form-field intake-field-{{ field.name }}">
+                    <label for="{{ field.id_for_label }}">{{ field.label|upper }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
+                    {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <details class="panel intake-raw-preview">
+        <summary>VIEW ORIGINAL PASTED LISTING</summary>
+        <pre>{{ draft.raw_text }}</pre>
+    </details>
+
+    <section class="panel intake-final-actions">
+        <div><p class="eyebrow">FINAL REVIEW</p><h2>CREATE THE TRACKED JOB</h2><p>The job will begin as <strong>Unverified</strong> until you confirm the employer link and deadline.</p></div>
+        <div class="form-actions">
+            <button class="button button-primary" type="submit">APPROVE AND CREATE JOB</button>
+            <a class="text-link" href="{% url 'job_intake_start' %}">START OVER</a>
+        </div>
+    </section>
+</form>
+
+<form method="post" action="{% url 'job_intake_clear' %}" class="intake-discard-form">
+    {% csrf_token %}
+    <button class="button button-danger" type="submit">DISCARD DRAFT</button>
+</form>
+{% endblock %}
