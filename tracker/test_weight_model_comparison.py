@@ -117,7 +117,7 @@ class WeightModelComparisonTests(TestCase):
     def test_model_a_is_kept_when_industry_weight_performs_better(self, analyze):
         self.make_calibration(
             "Industry-sensitive role",
-            JobCalibration.HumanRating.STRONG,
+            JobCalibration.HumanRating.GOOD,
         )
         analyze.return_value = self.result_with_fractions(
             0.2,
