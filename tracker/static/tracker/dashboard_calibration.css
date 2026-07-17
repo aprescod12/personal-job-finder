@@ -1,0 +1,317 @@
+.dashboard-heading::after {
+    width: 112px;
+    height: 18px;
+    box-shadow: 0 -28px 0 var(--sky), 0 -56px 0 var(--lime);
+}
+
+.dashboard-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.dashboard-stats .stat-card:nth-child(5)::after { background: var(--lime); }
+.dashboard-stats .stat-card:nth-child(6)::after { background: var(--violet); }
+.dashboard-stats .stat-card:nth-child(7)::after { background: var(--sky); }
+.dashboard-stats .stat-card:nth-child(8)::after { background: var(--coral); }
+
+.dashboard-filter-bar {
+    display: grid;
+    grid-template-columns: minmax(260px, 2fr) repeat(5, minmax(150px, 1fr));
+    align-items: end;
+}
+
+.dashboard-filter-bar .filter-field {
+    min-width: 0;
+}
+
+.dashboard-search-field {
+    grid-column: span 2;
+}
+
+.dashboard-filter-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+}
+
+.ranked-job-card {
+    display: flex;
+    min-height: 430px;
+    flex-direction: column;
+}
+
+.ranked-card-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 18px;
+    margin-top: 20px;
+}
+
+.ranked-card-heading h2 {
+    max-width: none;
+    margin: 0 0 7px;
+}
+
+.dashboard-match-score {
+    display: grid;
+    min-width: 88px;
+    min-height: 88px;
+    place-content: center;
+    border: 3px solid var(--ink);
+    background: var(--lime);
+    box-shadow: 4px 4px 0 var(--ink);
+    color: var(--ink);
+    text-align: center;
+    text-decoration: none;
+    transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.dashboard-match-score:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 var(--ink);
+}
+
+.dashboard-match-score strong {
+    font-size: 2.15rem;
+    font-weight: 950;
+    line-height: 0.9;
+}
+
+.dashboard-match-score span {
+    margin-top: 5px;
+    font-size: 0.62rem;
+    font-weight: 950;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.dashboard-match-score.match-good-match,
+.dashboard-match-score.match-possible-match {
+    background: var(--sky);
+}
+
+.dashboard-match-score.match-weak-match,
+.dashboard-match-score.match-low-confidence {
+    background: #fff0ab;
+}
+
+.dashboard-match-score.match-disqualified {
+    background: var(--coral);
+}
+
+.dashboard-match-empty {
+    background: #e7e9ee;
+}
+
+.dashboard-match-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.dashboard-match-meta > span {
+    border: 2px solid var(--ink);
+    background: #fff;
+    padding: 5px 8px;
+    font-size: 0.66rem;
+    font-weight: 950;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.dashboard-match-label.match-strong-match,
+.dashboard-match-label.match-good-match {
+    background: #c9ffd7;
+}
+
+.dashboard-match-label.match-possible-match {
+    background: var(--sky);
+}
+
+.dashboard-match-label.match-weak-match,
+.dashboard-match-label.match-low-confidence {
+    background: #fff0ab;
+}
+
+.dashboard-match-label.match-disqualified {
+    background: var(--danger-soft);
+}
+
+.dashboard-match-needs-data span {
+    background: #e7e9ee;
+}
+
+.calibration-chip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    border: 2px solid var(--ink);
+    border-left-width: 10px;
+    background: #fff;
+    padding: 9px 11px;
+    font-size: 0.69rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.calibration-chip small {
+    margin-left: auto;
+    font-weight: 950;
+}
+
+.calibration-agrees {
+    border-left-color: var(--lime-dark);
+    background: #efffd0;
+}
+
+.calibration-differs {
+    border-left-color: var(--coral);
+    background: var(--danger-soft);
+}
+
+.calibration-review {
+    border-left-color: var(--violet);
+    background: #f0edff;
+}
+
+.ranked-job-card .card-actions {
+    margin-top: auto;
+    padding-top: 22px;
+}
+
+.calibration-panel {
+    margin-top: 32px;
+    background: var(--ink-soft);
+    color: #fff;
+}
+
+.calibration-panel .eyebrow {
+    color: var(--lime);
+}
+
+.calibration-intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 310px);
+    align-items: start;
+    gap: 28px;
+}
+
+.calibration-intro p:not(.eyebrow) {
+    max-width: 720px;
+    color: #d9deea;
+}
+
+.calibration-current {
+    display: grid;
+    border: 3px solid #fff;
+    box-shadow: 5px 5px 0 var(--lime);
+    padding: 18px;
+    background: var(--surface);
+    color: var(--ink);
+}
+
+.calibration-current span,
+.calibration-current small {
+    font-size: 0.66rem;
+    font-weight: 950;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.calibration-current strong {
+    margin: 7px 0;
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.calibration-current.calibration-differs {
+    box-shadow: 5px 5px 0 var(--coral);
+}
+
+.calibration-current.calibration-review {
+    box-shadow: 5px 5px 0 var(--violet);
+}
+
+.calibration-form {
+    margin-top: 28px;
+    border-top: 2px solid rgba(255, 255, 255, 0.28);
+    padding-top: 26px;
+}
+
+.calibration-form-grid {
+    display: grid;
+    grid-template-columns: minmax(200px, 0.7fr) minmax(0, 2fr);
+    gap: 20px;
+}
+
+.calibration-form .form-field label {
+    color: #fff;
+}
+
+.calibration-form .full-span {
+    grid-column: auto;
+}
+
+.calibration-actions {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: 20px;
+}
+
+.calibration-actions .muted {
+    color: #cfd5e2;
+}
+
+@media (max-width: 1020px) {
+    .dashboard-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dashboard-filter-bar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dashboard-search-field {
+        grid-column: 1 / -1;
+    }
+
+    .calibration-intro {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .dashboard-stats,
+    .dashboard-filter-bar,
+    .calibration-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-search-field,
+    .dashboard-filter-actions {
+        grid-column: auto;
+    }
+
+    .dashboard-filter-actions,
+    .calibration-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .ranked-card-heading {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-match-score {
+        width: 100%;
+        min-height: 70px;
+    }
+
+    .calibration-chip small {
+        width: 100%;
+        margin-left: 0;
+    }
+}
