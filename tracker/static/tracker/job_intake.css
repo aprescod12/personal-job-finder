@@ -1,0 +1,175 @@
+.intake-heading {
+    align-items: stretch;
+}
+
+.intake-boundary-card {
+    min-width: 250px;
+    padding: 1rem;
+    border: 2px solid var(--ink, #171b22);
+    background: var(--lime, #c8ff35);
+    box-shadow: 7px 7px 0 var(--ink, #171b22);
+}
+
+.intake-boundary-card span,
+.intake-boundary-card small {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+}
+
+.intake-boundary-card strong {
+    display: block;
+    margin: 0.45rem 0;
+    font-size: 1.15rem;
+}
+
+.intake-layout {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.35fr);
+    gap: 1.2rem;
+}
+
+.intake-explainer ol {
+    display: grid;
+    gap: 0.7rem;
+    margin: 1rem 0 1.4rem;
+    padding: 0;
+    list-style: none;
+}
+
+.intake-explainer li {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 0.7rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--ink, #171b22);
+}
+
+.intake-explainer li strong {
+    text-transform: uppercase;
+}
+
+.intake-form-panel textarea {
+    min-height: 320px;
+}
+
+.intake-review-form {
+    display: grid;
+    gap: 1rem;
+}
+
+.intake-evidence-panel,
+.intake-final-actions,
+.intake-section-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.intake-evidence-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+    flex: 1;
+    max-width: 760px;
+}
+
+.intake-evidence-grid article {
+    padding: 0.8rem;
+    border: 2px solid var(--ink, #171b22);
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.intake-evidence-grid article > span,
+.intake-section-heading > span {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+}
+
+.intake-evidence-grid ul {
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+.intake-evidence-grid li + li {
+    margin-top: 0.35rem;
+}
+
+.intake-text-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-top: 1rem;
+}
+
+.intake-field-description,
+.intake-field-required_skills,
+.intake-field-preferred_skills,
+.intake-field-required_education,
+.intake-field-preferred_education,
+.intake-field-responsibilities,
+.intake-field-certifications,
+.intake-field-work_authorization_requirements,
+.intake-field-hard_disqualifiers,
+.intake-field-requirement_notes {
+    grid-column: span 2;
+}
+
+.intake-raw-preview summary {
+    cursor: pointer;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.intake-raw-preview pre {
+    max-height: 420px;
+    overflow: auto;
+    margin: 1rem 0 0;
+    padding: 1rem;
+    border: 2px solid var(--ink, #171b22);
+    white-space: pre-wrap;
+    font-family: inherit;
+    background: rgba(255, 255, 255, 0.65);
+}
+
+.intake-discard-form {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -0.5rem;
+}
+
+@media (max-width: 850px) {
+    .intake-layout,
+    .intake-text-grid,
+    .intake-evidence-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .intake-field-description,
+    .intake-field-required_skills,
+    .intake-field-preferred_skills,
+    .intake-field-required_education,
+    .intake-field-preferred_education,
+    .intake-field-responsibilities,
+    .intake-field-certifications,
+    .intake-field-work_authorization_requirements,
+    .intake-field-hard_disqualifiers,
+    .intake-field-requirement_notes {
+        grid-column: auto;
+    }
+
+    .intake-evidence-panel,
+    .intake-final-actions,
+    .intake-section-heading {
+        display: block;
+    }
+
+    .intake-boundary-card {
+        margin-top: 1rem;
+    }
+}
