@@ -29,12 +29,15 @@ def run_job_verification(request, job_id):
     if run.status == ListingVerificationRun.RunStatus.FAILED:
         messages.error(
             request,
-            "Employer-page retrieval failed. Review the saved URL and run evidence.",
+            "Employer-page verification failed. Review the saved URL and run evidence.",
         )
     elif run.status == ListingVerificationRun.RunStatus.NEEDS_REVIEW:
         messages.warning(
             request,
-            "Employer-page retrieval completed. Page interpretation is still required.",
+            (
+                "Employer page analyzed. Review the suggested listing status, "
+                "deadline, and evidence before changing the job record."
+            ),
         )
     else:
         messages.success(request, "Verification completed and the result was saved.")
