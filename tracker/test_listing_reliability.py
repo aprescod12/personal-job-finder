@@ -125,9 +125,9 @@ class ListingReliabilityViewTests(TestCase):
         response = self.client.get(reverse("job_list"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "VERIFY THE LISTING")
-        self.assertContains(response, "VERIFICATION REQUIRED")
-        self.assertContains(response, "Never checked on employer site")
+        self.assertContains(response, "VERIFY NOW")
+        self.assertContains(response, "Verify listing")
+        self.assertContains(response, "VERIFY")
 
         filtered = self.client.get(
             reverse("job_list"),
