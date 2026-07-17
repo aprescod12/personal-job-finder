@@ -57,12 +57,12 @@
         <div>
             <p class="eyebrow">STAGE 03 / VERIFICATION HISTORY</p>
             <h2>AUDIT EVERY CHECK</h2>
-            <p>Each run is preserved separately. Step 2 validates the runner and URL readiness only; it does not yet inspect the employer page or update the current listing status.</p>
+            <p>Each run is preserved separately. Step 3 retrieves the employer page under strict safety limits and stores transport evidence, but it does not yet interpret availability or update the current listing status.</p>
         </div>
         {% if job.job_url %}
         <form method="post" action="{% url 'run_job_verification' job.id %}" class="inline-action-form">
             {% csrf_token %}
-            <button class="button button-primary" type="submit">RUN URL PREFLIGHT</button>
+            <button class="button button-primary" type="submit">RETRIEVE EMPLOYER PAGE</button>
         </form>
         {% else %}
         <a class="button button-danger" href="{% url 'job_listing_verify' job.id %}">ADD DIRECT LINK</a>
@@ -96,7 +96,7 @@
         {% else %}
         <div class="verification-history-empty">
             <strong>NO VERIFICATION RUNS YET</strong>
-            <span>Run the URL preflight to test the Stage 3 verification pipeline.</span>
+            <span>Retrieve the employer page to create the first auditable Stage 3 transport record.</span>
         </div>
         {% endif %}
     {% endwith %}
