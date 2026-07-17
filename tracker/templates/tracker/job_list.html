@@ -5,23 +5,23 @@
 {% block content %}
 <section class="page-heading">
     <div>
-        <p class="eyebrow">PIPELINE / STAGE 01</p>
-        <h1>TRACK THE SEARCH. CONTROL THE PIPELINE.</h1>
-        <p class="muted">Build a clear record of every opportunity now. The future AI agent will search, analyze, and write into this same system.</p>
+        <p class="eyebrow">PIPELINE / STAGE 02</p>
+        <h1>RANK THE FIT. CALIBRATE THE SEARCH.</h1>
+        <p class="muted">Compare opportunities against your career profile, separate priority roles from adjacent fits, and record your own judgment so the matcher can be improved with real examples.</p>
     </div>
 </section>
 
-<section class="stats-grid" aria-label="Job statistics">
+<section class="stats-grid" aria-label="Job and match statistics">
     <article class="stat-card"><span>TOTAL JOBS</span><strong>{{ total_jobs }}</strong></article>
-    <article class="stat-card"><span>SAVED</span><strong>{{ saved_jobs }}</strong></article>
-    <article class="stat-card"><span>APPLIED</span><strong>{{ applied_jobs }}</strong></article>
-    <article class="stat-card"><span>INTERVIEWS</span><strong>{{ interview_jobs }}</strong></article>
+    <article class="stat-card"><span>ANALYZED IN VIEW</span><strong>{{ analyzed_jobs }}</strong></article>
+    <article class="stat-card"><span>STRONG / GOOD</span><strong>{{ strong_jobs }}</strong></article>
+    <article class="stat-card"><span>HUMAN-REVIEWED</span><strong>{{ reviewed_jobs }}</strong></article>
 </section>
 
-<form method="get" class="filter-bar">
-    <div class="filter-field grow">
+<form method="get" class="filter-bar fit-filter-bar">
+    <div class="filter-field grow fit-search-field">
         <label for="id_q">SEARCH</label>
-        <input id="id_q" type="search" name="q" value="{{ query }}" placeholder="Title, company, location, or keyword">
+        <input id="id_q" type="search" name="q" value="{{ query }}" placeholder="Title, company, location, skill, role family, or industry">
     </div>
     <div class="filter-field">
         <label for="id_status">STATUS</label>
@@ -32,9 +32,41 @@
             {% endfor %}
         </select>
     </div>
-    <div class="filter-actions">
-        <button class="button button-secondary" type="submit">FILTER</button>
-        {% if query or selected_status %}
+    <div class="filter-field">
+        <label for="id_fit">FIT</label>
+        <select id="id_fit" name="fit">
+            {% for value, label in fit_filter_choices %}
+                <option value="{{ value }}" {% if selected_fit == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-field">
+        <label for="id_track">LANE</label>
+        <select id="id_track" name="track">
+            {% for value, label in track_filter_choices %}
+                <option value="{{ value }}" {% if selected_track == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-field">
+        <label for="id_review">CALIBRATION</label>
+        <select id="id_review" name="review">
+            {% for value, label in review_filter_choices %}
+                <option value="{{ value }}" {% if selected_review == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-field">
+        <label for="id_sort">SORT</label>
+        <select id="id_sort" name="sort">
+            {% for value, label in sort_choices %}
+                <option value="{{ value }}" {% if selected_sort == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-actions fit-filter-actions">
+        <button class="button button-secondary" type="submit">APPLY VIEW</button>
+        {% if query or selected_status or selected_fit or selected_track or selected_review or selected_sort != "newest" %}
             <a class="text-link" href="{% url 'job_list' %}">CLEAR</a>
         {% endif %}
     </div>
@@ -43,18 +75,53 @@
 {% if jobs %}
     <section class="job-grid">
         {% for job in jobs %}
-            <article class="job-card">
+            <article class="job-card fit-job-card">
                 <div class="job-card-topline">
                     <span class="status-badge status-{{ job.status }}">{{ job.get_status_display }}</span>
                     <span class="muted small">ADDED {{ job.created_at|date:"M j, Y" }}</span>
                 </div>
                 <h2><a href="{% url 'job_detail' job.id %}">{{ job.title }}</a></h2>
                 <p class="company-name">{{ job.company }}</p>
+
+                <a class="dashboard-match-strip" href="{% url 'job_match' job.id %}" aria-label="Open match analysis for {{ job.title }}">
+                    {% if job.match_result.has_requirements %}
+                        <span class="dashboard-match-score{% if job.match_result.is_disqualified %} dashboard-match-blocked{% elif job.match_result.score >= 80 %} dashboard-match-strong{% elif job.match_result.score >= 65 %} dashboard-match-good{% elif job.match_result.score >= 50 %} dashboard-match-possible{% else %} dashboard-match-weak{% endif %}">
+                            <strong>{{ job.match_result.score }}</strong><small>/100</small>
+                        </span>
+                        <span class="dashboard-match-copy">
+                            <strong>{{ job.match_result.classification }}</strong>
+                            <small>{{ job.match_result.track }} · {{ job.match_result.evidence_coverage }}% EVIDENCE</small>
+                        </span>
+                    {% else %}
+                        <span class="dashboard-match-score dashboard-match-empty">—</span>
+                        <span class="dashboard-match-copy">
+                            <strong>NEEDS REQUIREMENTS</strong>
+                            <small>ADD STRUCTURED EVIDENCE TO SCORE</small>
+                        </span>
+                    {% endif %}
+                    <span class="dashboard-match-arrow">→</span>
+                </a>
+
                 <div class="job-meta">
                     {% if job.location %}<span>{{ job.location }}</span>{% endif %}
                     {% if job.get_employment_type_display != "Unknown" %}<span>{{ job.get_employment_type_display }}</span>{% endif %}
                     {% if job.get_work_arrangement_display != "Unknown" %}<span>{{ job.get_work_arrangement_display }}</span>{% endif %}
                 </div>
+
+                {% if job.calibration_record %}
+                    <div class="calibration-mini{% if job.calibration_record.agreement_status == 'ALIGNED' %} calibration-aligned{% elif job.calibration_record.agreement_status == 'REVIEW' %} calibration-review{% else %} calibration-needs-evidence{% endif %}">
+                        <span>YOUR REVIEW</span>
+                        <strong>{{ job.calibration_record.get_human_rating_display }}</strong>
+                        <small>{{ job.calibration_record.agreement_label }}</small>
+                    </div>
+                {% else %}
+                    <div class="calibration-mini calibration-unreviewed">
+                        <span>YOUR REVIEW</span>
+                        <strong>NOT CALIBRATED</strong>
+                        <small>Open match analysis to record your judgment.</small>
+                    </div>
+                {% endif %}
+
                 {% if job.next_action %}
                     <div class="next-action">
                         <strong>NEXT:</strong> {{ job.next_action }}
@@ -62,6 +129,7 @@
                     </div>
                 {% endif %}
                 <div class="card-actions">
+                    <a class="text-link" href="{% url 'job_match' job.id %}">MATCH ANALYSIS</a>
                     <a class="text-link" href="{% url 'job_detail' job.id %}">VIEW DETAILS</a>
                     <a class="text-link" href="{% url 'job_edit' job.id %}">EDIT</a>
                 </div>
@@ -71,7 +139,7 @@
 {% else %}
     <section class="empty-state">
         <h2>NO MATCHING JOBS</h2>
-        <p>{% if query or selected_status %}Try clearing the filters.{% else %}Add your first opportunity to begin tracking it.{% endif %}</p>
+        <p>{% if query or selected_status or selected_fit or selected_track or selected_review %}Try clearing or widening the dashboard filters.{% else %}Add your first opportunity to begin tracking it.{% endif %}</p>
         <a class="button button-primary" href="{% url 'job_create' %}">ADD A JOB</a>
     </section>
 {% endif %}
