@@ -12,8 +12,6 @@ comparison. This module applies Amiri's calibrated search strategy:
 
 from __future__ import annotations
 
-from dataclasses import replace
-
 from .matching import (
     CategoryScore,
     EvidenceMatch,
@@ -164,9 +162,11 @@ def _reweight_categories(result, job, requirements):
         weight = CATEGORY_WEIGHTS[category.key]
         fraction = _category_fraction(category)
         explanation = category.explanation
+        available = category.available
 
         if category.key == "role" and transferable_role:
             fraction = role_fraction
+            available = True
             explanation = (
                 "Transferable technical function inside the target medical-device "
                 "ecosystem. Exact title alignment is not required for entry."
@@ -183,7 +183,7 @@ def _reweight_categories(result, job, requirements):
                 label=category.label,
                 weight=weight,
                 earned=weight * fraction,
-                available=category.available,
+                available=available,
                 explanation=explanation,
             )
         )
@@ -263,6 +263,7 @@ def analyze_job_match(profile, job, requirements):
     """Return a transparent match result calibrated to industry-first entry."""
 
     result = analyze_base_job_match(profile, job, requirements)
+    result.matcher_version = MATCHER_VERSION
     if not result.has_requirements:
         return result
 
