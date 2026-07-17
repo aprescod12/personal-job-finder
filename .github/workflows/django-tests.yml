@@ -30,17 +30,4 @@ jobs:
         run: python manage.py check
 
       - name: Run tests
-        run: |
-          set +e
-          python manage.py test > test-output.txt 2>&1
-          status=$?
-          cat test-output.txt
-          exit $status
-
-      - name: Upload failing test output
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: listing-reliability-test-output
-          path: test-output.txt
-          retention-days: 1
+        run: python manage.py test
