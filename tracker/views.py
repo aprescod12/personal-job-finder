@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import CareerProfileForm, JobPostingForm, JobRequirementForm
 from .models import CareerProfile, JobPosting, JobRequirement
+from .services.matching import analyze_job_match
 
 
 def job_list(request):
@@ -48,7 +49,7 @@ def career_profile(request):
             form.save()
             messages.success(
                 request,
-                "Career profile saved. Future job-match analysis will use this information.",
+                "Career profile saved. Job-match analysis will use this information.",
             )
             return redirect("career_profile")
     else:
@@ -67,12 +68,34 @@ def career_profile(request):
 def job_detail(request, job_id):
     job = get_object_or_404(JobPosting, id=job_id)
     requirements = JobRequirement.objects.filter(job=job).first()
+    profile = CareerProfile.get_solo()
+    match_result = analyze_job_match(profile, job, requirements)
+
     return render(
         request,
         "tracker/job_detail.html",
         {
             "job": job,
             "requirements": requirements,
+            "match_result": match_result,
+        },
+    )
+
+
+def job_match(request, job_id):
+    job = get_object_or_404(JobPosting, id=job_id)
+    requirements = JobRequirement.objects.filter(job=job).first()
+    profile = CareerProfile.get_solo()
+    match_result = analyze_job_match(profile, job, requirements)
+
+    return render(
+        request,
+        "tracker/job_match.html",
+        {
+            "job": job,
+            "requirements": requirements,
+            "profile": profile,
+            "match_result": match_result,
         },
     )
 

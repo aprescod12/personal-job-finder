@@ -3,6 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .models import CareerProfile, JobPosting, JobRequirement
+from .services.matching import analyze_job_match, concepts_in, match_item
 
 
 class JobPostingModelTests(TestCase):
@@ -74,6 +75,7 @@ class JobPostingViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Biomedical Engineer")
         self.assertContains(response, "JOB REQUIREMENTS")
+        self.assertContains(response, "MATCH ANALYSIS")
 
     def test_create_job(self):
         response = self.client.post(
@@ -216,3 +218,131 @@ class CareerProfileViewTests(TestCase):
         )
         self.assertEqual(profile.target_roles, "Systems Engineer\nTest Engineer")
         self.assertEqual(profile.minimum_salary, 70000)
+
+
+class VocabularyTests(TestCase):
+    def test_aliases_map_to_same_concept(self):
+        self.assertIn("verification_validation", concepts_in("V&V"))
+        self.assertIn(
+            "verification_validation",
+            concepts_in("Testing and validation"),
+        )
+
+    def test_related_vocabulary_is_not_treated_as_missing(self):
+        match = match_item(
+            "Systems integration",
+            ["Requirements engineering"],
+        )
+        self.assertEqual(match.match_type, "related")
+        self.assertGreater(match.strength, 0)
+
+
+class TransparentMatchingTests(TestCase):
+    def setUp(self):
+        self.profile = CareerProfile.get_solo()
+        self.profile.preferred_locations = (
+            "Philadelphia, PA\nRemote — United States"
+        )
+        self.profile.save()
+
+        self.job = JobPosting.objects.create(
+            title="Validation Engineer",
+            company="MedTech Co",
+            location="Philadelphia, PA",
+            employment_type=JobPosting.EmploymentType.FULL_TIME,
+            work_arrangement=JobPosting.WorkArrangement.HYBRID,
+        )
+        self.requirements = JobRequirement.objects.create(
+            job=self.job,
+            role_family="Verification and Validation Engineering",
+            seniority_level=JobRequirement.SeniorityLevel.ENTRY_LEVEL,
+            industry="Medical devices",
+            required_skills="V&V\nPython",
+            preferred_skills="ISO 13485",
+            required_education=(
+                "Electrical Engineering\nBiomedical Engineering"
+            ),
+            minimum_years_experience=0,
+            maximum_years_experience=2,
+        )
+
+    def test_match_uses_aliases_and_explains_related_evidence(self):
+        result = analyze_job_match(
+            self.profile,
+            self.job,
+            self.requirements,
+        )
+
+        self.assertGreaterEqual(result.score, 60)
+        self.assertEqual(result.track, "PRIORITY ROLE")
+        self.assertTrue(
+            any(
+                item.requirement == "V&V"
+                for item in result.direct_matches
+            )
+        )
+        self.assertTrue(
+            any(
+                "ISO 13485" in item.requirement
+                for item in result.related_matches
+            )
+        )
+
+    def test_missing_requirements_are_not_given_a_fake_score(self):
+        empty_job = JobPosting.objects.create(
+            title="Engineer",
+            company="Unknown",
+        )
+        empty_requirements = JobRequirement.objects.create(job=empty_job)
+
+        result = analyze_job_match(
+            self.profile,
+            empty_job,
+            empty_requirements,
+        )
+
+        self.assertFalse(result.has_requirements)
+        self.assertEqual(result.classification, "NEEDS REQUIREMENTS")
+        self.assertEqual(result.score, 0)
+
+    def test_adjacent_role_is_labeled_separately(self):
+        self.job.title = "Clinical Engineer"
+        self.job.save()
+        self.requirements.role_family = "Clinical Engineering"
+        self.requirements.save()
+
+        result = analyze_job_match(
+            self.profile,
+            self.job,
+            self.requirements,
+        )
+
+        self.assertEqual(result.track, "ADJACENT OPPORTUNITY")
+
+    def test_sponsorship_conflict_is_confirmed_blocker(self):
+        self.profile.work_authorization = "Requires sponsorship"
+        self.profile.save()
+        self.requirements.work_authorization_requirements = (
+            "No sponsorship available"
+        )
+        self.requirements.save()
+
+        result = analyze_job_match(
+            self.profile,
+            self.job,
+            self.requirements,
+        )
+
+        self.assertEqual(result.classification, "DISQUALIFIED")
+        self.assertTrue(result.confirmed_blockers)
+
+    def test_match_page_renders_score_and_evidence(self):
+        response = self.client.get(
+            reverse("job_match", args=[self.job.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "MATCH ANALYSIS")
+        self.assertContains(response, "CATEGORY BREAKDOWN")
+        self.assertContains(response, "DIRECT MATCHES")
+        self.assertContains(response, "GAPS")

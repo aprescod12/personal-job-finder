@@ -1,0 +1,174 @@
+{% extends "tracker/base.html" %}
+
+{% block title %}Match Analysis · {{ job.title }}{% endblock %}
+
+{% block content %}
+<p><a class="text-link" href="{% url 'job_detail' job.id %}">← BACK TO JOB</a></p>
+
+<section class="match-hero panel">
+    <div class="match-hero-copy">
+        <p class="eyebrow">STAGE 02 / TRANSPARENT MATCHER</p>
+        <h1>MATCH ANALYSIS</h1>
+        <p class="match-job-name">{{ job.title }} · {{ job.company }}</p>
+        <p class="muted">This result uses explicit rules, normalized vocabulary, and the evidence stored in your career profile. It does not use an LLM.</p>
+    </div>
+
+    {% if match_result.has_requirements %}
+        <div class="match-score-block">
+            <span class="match-score-label">MATCH SCORE</span>
+            <strong class="match-score-number">{{ match_result.score }}</strong>
+            <span class="match-score-denominator">/100</span>
+            <span class="match-classification">{{ match_result.classification }}</span>
+            <span class="match-track">{{ match_result.track }}</span>
+        </div>
+    {% else %}
+        <div class="match-score-block match-score-empty">
+            <span class="match-score-label">MATCH STATUS</span>
+            <strong>NEEDS REQUIREMENTS</strong>
+        </div>
+    {% endif %}
+</section>
+
+{% if not match_result.has_requirements %}
+<section class="panel match-empty-state">
+    <p class="match-empty-code">MATCH / 00</p>
+    <div>
+        <h2>STRUCTURED REQUIREMENTS ARE NEEDED</h2>
+        <p>Add the role family, skills, education, experience, industry, and blockers before generating a trustworthy score.</p>
+        <a class="button button-accent" href="{% url 'job_requirements' job.id %}">ADD JOB REQUIREMENTS</a>
+    </div>
+</section>
+{% else %}
+<section class="match-overview-grid">
+    <article class="panel match-overview-card">
+        <span>EVIDENCE COVERAGE</span>
+        <strong>{{ match_result.evidence_coverage }}%</strong>
+        <p>Only categories with enough information are included in the score.</p>
+    </article>
+    <article class="panel match-overview-card">
+        <span>DIRECT MATCHES</span>
+        <strong>{{ match_result.direct_matches|length }}</strong>
+        <p>Explicit or normalized evidence supports the requirement.</p>
+    </article>
+    <article class="panel match-overview-card">
+        <span>RELATED MATCHES</span>
+        <strong>{{ match_result.related_matches|length }}</strong>
+        <p>Transferable evidence is relevant but not identical.</p>
+    </article>
+    <article class="panel match-overview-card">
+        <span>GAPS</span>
+        <strong>{{ match_result.gaps|length }}</strong>
+        <p>No supported evidence was found in the current profile.</p>
+    </article>
+</section>
+
+<section class="panel match-section">
+    <div class="match-section-heading">
+        <div>
+            <p class="eyebrow">WEIGHTED SCORING</p>
+            <h2>CATEGORY BREAKDOWN</h2>
+        </div>
+    </div>
+
+    <div class="match-category-grid">
+        {% for category in match_result.categories %}
+            <article class="match-category-card{% if not category.available %} match-category-unavailable{% endif %}">
+                <div class="match-category-topline">
+                    <h3>{{ category.label }}</h3>
+                    {% if category.available %}
+                        <strong>{{ category.earned|floatformat:1 }} / {{ category.weight|floatformat:0 }}</strong>
+                    {% else %}
+                        <strong>NOT SCORED</strong>
+                    {% endif %}
+                </div>
+                {% if category.available %}
+                    <div class="match-meter" aria-label="{{ category.label }} score {{ category.percent }} percent">
+                        <span style="width: {{ category.percent }}%"></span>
+                    </div>
+                {% endif %}
+                <p>{{ category.explanation }}</p>
+            </article>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="match-evidence-grid">
+    <article class="panel match-section match-direct-section">
+        <p class="eyebrow">SUPPORTED EVIDENCE</p>
+        <h2>DIRECT MATCHES</h2>
+        <div class="match-evidence-list">
+            {% for item in match_result.direct_matches %}
+                <div class="match-evidence-item">
+                    <strong>{{ item.requirement }}</strong>
+                    <span>{{ item.evidence }}</span>
+                    <small>{{ item.concept }}</small>
+                </div>
+            {% empty %}
+                <p class="muted">No direct matches identified.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel match-section match-related-section">
+        <p class="eyebrow">TRANSFERABLE EVIDENCE</p>
+        <h2>RELATED MATCHES</h2>
+        <div class="match-evidence-list">
+            {% for item in match_result.related_matches %}
+                <div class="match-evidence-item">
+                    <strong>{{ item.requirement }}</strong>
+                    <span>{{ item.evidence }}</span>
+                    <small>{{ item.concept }}</small>
+                </div>
+            {% empty %}
+                <p class="muted">No related matches identified.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="match-evidence-grid">
+    <article class="panel match-section match-gap-section">
+        <p class="eyebrow">MISSING EVIDENCE</p>
+        <h2>GAPS</h2>
+        <div class="match-evidence-list">
+            {% for item in match_result.gaps %}
+                <div class="match-evidence-item">
+                    <strong>{{ item.requirement }}</strong>
+                    <span>No supported evidence found in the current profile.</span>
+                </div>
+            {% empty %}
+                <p class="muted">No gaps identified from the entered requirements.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel match-section match-blocker-section">
+        <p class="eyebrow">ELIGIBILITY REVIEW</p>
+        <h2>BLOCKERS TO REVIEW</h2>
+        <div class="match-evidence-list">
+            {% for blocker in match_result.confirmed_blockers %}
+                <div class="match-evidence-item match-blocker-confirmed">
+                    <strong>CONFIRMED CONFLICT</strong>
+                    <span>{{ blocker }}</span>
+                </div>
+            {% endfor %}
+            {% for blocker in match_result.review_blockers %}
+                <div class="match-evidence-item">
+                    <strong>VERIFY MANUALLY</strong>
+                    <span>{{ blocker }}</span>
+                </div>
+            {% empty %}
+                {% if not match_result.confirmed_blockers %}
+                    <p class="muted">No blockers identified.</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="panel match-method-note">
+    <h2>HOW TO READ THIS RESULT</h2>
+    <p><strong>Direct</strong> means explicit or alias-normalized evidence was found. <strong>Related</strong> means the system found a documented transferable relationship. <strong>Missing</strong> means the profile currently contains no supported evidence. The score should guide review, not replace your judgment.</p>
+</section>
+{% endif %}
+{% endblock %}
