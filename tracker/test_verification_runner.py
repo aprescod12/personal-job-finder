@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.test import TestCase
 from django.urls import reverse
 
@@ -7,6 +9,23 @@ from .services.listing_verification_runner import (
     VerificationObservation,
     run_listing_verification,
 )
+from .services.page_retrieval import RetrievedPage
+
+
+def retrieved_page(url="https://careers.example.com/jobs/123"):
+    body = "<html><title>Test Engineer</title><a>Apply</a></html>"
+    return RetrievedPage(
+        requested_url=url,
+        final_url=url,
+        status_code=200,
+        content_type="text/html",
+        charset="utf-8",
+        bytes_read=len(body.encode()),
+        body_sha256="a" * 64,
+        body_text=body,
+        body_stored=True,
+        response_headers={"content_type": "text/html; charset=utf-8"},
+    )
 
 
 class CompletedTestVerifier:
@@ -45,21 +64,32 @@ class ListingVerificationRunnerTests(TestCase):
             listing_status=JobPosting.ListingStatus.UNVERIFIED,
             deadline_status=JobPosting.DeadlineStatus.UNKNOWN,
         )
+        patcher = patch(
+            "tracker.services.listing_verification_runner.ControlledHttpRetriever.retrieve",
+            return_value=retrieved_page(),
+        )
+        self.retrieve_mock = patcher.start()
+        self.addCleanup(patcher.stop)
 
-    def test_default_preflight_records_review_without_network_claim(self):
+    def test_default_retrieval_records_transport_evidence_without_status_claim(self):
         run = run_listing_verification(self.job)
 
         self.assertEqual(
             run.status,
             ListingVerificationRun.RunStatus.NEEDS_REVIEW,
         )
-        self.assertEqual(run.confidence, ListingVerificationRun.Confidence.LOW)
+        self.assertEqual(run.confidence, ListingVerificationRun.Confidence.MEDIUM)
         self.assertEqual(
             run.review_status,
             ListingVerificationRun.ReviewStatus.PENDING,
         )
-        self.assertFalse(run.structured_evidence["network_request_performed"])
-        self.assertEqual(run.structured_evidence["url_host"], "careers.example.com")
+        self.assertTrue(run.structured_evidence["network_request_performed"])
+        self.assertTrue(run.structured_evidence["retrieval_only"])
+        self.assertEqual(run.final_url, self.job.job_url)
+        self.assertEqual(run.http_status_code, 200)
+        self.assertEqual(run.detected_listing_status, JobPosting.ListingStatus.UNVERIFIED)
+        self.assertEqual(run.detected_deadline_status, JobPosting.DeadlineStatus.UNKNOWN)
+        self.assertIsNone(run.apply_action_found)
         self.assertIsNotNone(run.completed_at)
 
         self.job.refresh_from_db()
@@ -72,6 +102,17 @@ class ListingVerificationRunnerTests(TestCase):
             JobPosting.DeadlineStatus.UNKNOWN,
         )
         self.assertIsNone(self.job.listing_last_verified)
+
+    def test_default_retrieval_stores_bounded_page_text_for_later_interpretation(self):
+        run = run_listing_verification(self.job)
+
+        self.assertIn("Test Engineer", run.structured_evidence["page_text"])
+        self.assertTrue(run.structured_evidence["body_stored"])
+        self.assertEqual(run.structured_evidence["body_sha256"], "a" * 64)
+        self.assertEqual(
+            run.structured_evidence["next_required_capability"],
+            "employer_page_interpretation",
+        )
 
     def test_injected_verifier_can_complete_a_run(self):
         run = run_listing_verification(
@@ -107,6 +148,7 @@ class ListingVerificationRunnerTests(TestCase):
             run.review_status,
             ListingVerificationRun.ReviewStatus.PENDING,
         )
+        self.retrieve_mock.assert_not_called()
 
     def test_verifier_exception_is_captured_on_run(self):
         run = run_listing_verification(
@@ -117,6 +159,10 @@ class ListingVerificationRunnerTests(TestCase):
         self.assertEqual(run.status, ListingVerificationRun.RunStatus.FAILED)
         self.assertIn("Synthetic verifier failure", run.error_message)
         self.assertEqual(run.verifier_version, "test-failure-v1")
+        self.assertEqual(
+            run.structured_evidence["failure_type"],
+            "RuntimeError",
+        )
         self.assertIsNotNone(run.completed_at)
 
     def test_active_run_blocks_duplicate_execution(self):
@@ -140,6 +186,14 @@ class ListingVerificationRunnerViewTests(TestCase):
             company="Example Devices",
             job_url="https://jobs.example.com/test-engineer",
         )
+        patcher = patch(
+            "tracker.services.listing_verification_runner.ControlledHttpRetriever.retrieve",
+            return_value=retrieved_page(
+                "https://jobs.example.com/test-engineer"
+            ),
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_run_endpoint_is_post_only(self):
         response = self.client.get(
@@ -166,6 +220,7 @@ class ListingVerificationRunnerViewTests(TestCase):
             run.status,
             ListingVerificationRun.RunStatus.NEEDS_REVIEW,
         )
+        self.assertEqual(run.http_status_code, 200)
 
     def test_existing_active_run_is_reused_instead_of_duplicated(self):
         active = ListingVerificationRun.objects.create(
@@ -220,7 +275,7 @@ class ListingVerificationRunnerViewTests(TestCase):
             ),
         )
 
-    def test_result_page_explains_preflight_limit(self):
+    def test_result_page_explains_retrieval_limit(self):
         run = run_listing_verification(self.job)
 
         response = self.client.get(
@@ -231,6 +286,8 @@ class ListingVerificationRunnerViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "URL READINESS PREFLIGHT")
-        self.assertContains(response, "NO NETWORK REQUEST")
-        self.assertContains(response, "Employer-page checks arrive")
+        self.assertContains(response, "CONTROLLED EMPLOYER-PAGE RETRIEVAL")
+        self.assertContains(response, "NETWORK REQUEST COMPLETED")
+        self.assertContains(response, "does not decide whether the role is open")
+        self.assertContains(response, "HTTP STATUS")
+        self.assertContains(response, "200")
