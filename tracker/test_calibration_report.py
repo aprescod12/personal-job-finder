@@ -101,7 +101,7 @@ class CalibrationReportTests(TestCase):
         response = self.client.get(reverse("calibration_report"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "NO CALIBRATIONS YET")
+        self.assertContains(response, "NO CALIBRATIONS IN THIS DATASET")
         self.assertEqual(response.context["report"].reviewed_count, 0)
 
     def test_report_calculates_current_fit_and_lane_agreement(self):
