@@ -81,11 +81,11 @@ class MatchDashboardAndCalibrationTests(TestCase):
         response = self.client.get(reverse("job_list"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "VERIFY THE LISTING. THEN RANK THE FIT.")
+        self.assertContains(response, "PRIORITIZE THE RIGHT OPPORTUNITIES.")
         self.assertContains(response, "Alpha Medical")
-        self.assertContains(response, "MATCH ANALYSIS")
+        self.assertContains(response, "/100")
         self.assertContains(response, "PRIORITY ROLE")
-        self.assertContains(response, "VERIFICATION REQUIRED")
+        self.assertContains(response, "Verify listing")
 
     def test_strong_fit_filter_excludes_weak_job(self):
         response = self.client.get(reverse("job_list"), {"fit": "strong"})
