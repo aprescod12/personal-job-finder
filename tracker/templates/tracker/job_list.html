@@ -1,8 +1,10 @@
 {% extends "tracker/base.html" %}
+{% load static %}
 
 {% block title %}Job Dashboard{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'tracker/dashboard_simplified.css' %}">
 <div class="simplified-dashboard">
 <section class="page-heading dashboard-heading-compact">
     <div>
