@@ -1,6 +1,6 @@
 # Amiri's Job Finder
 
-A learning-first Django application for collecting, reviewing, and prioritizing job opportunities. Stage 1 established the reliable tracking foundation. Stage 2 now combines structured career evidence, structured job requirements, vocabulary normalization, transparent job-match analysis, dashboard ranking, human calibration, software-aware MedTech strategy, and calibration reporting.
+A learning-first Django application for collecting, reviewing, and prioritizing job opportunities. Stage 1 established the reliable tracking foundation. Stage 2 now combines structured career evidence, structured job requirements, vocabulary normalization, transparent job-match analysis, dashboard ranking, human calibration, software-aware MedTech strategy, controlled semantic similarity, and calibration reporting.
 
 ## Current features
 
@@ -25,7 +25,7 @@ A learning-first Django application for collecting, reviewing, and prioritizing 
 - Preserve the original job description alongside the reviewed structured interpretation
 - Normalize abbreviations, aliases, related skills, and role families through a version-controlled vocabulary
 - Calculate a deterministic weighted match score without an API key or LLM
-- Separate direct matches, transferable related matches, missing evidence, and blockers
+- Separate direct, rule-related, semantic, missing, and blocker evidence
 - Show evidence coverage so incomplete postings do not receive misleadingly precise scores
 - Label opportunities as priority roles, adjacent opportunities, or outside the stated priority
 - Display match results directly on the job dashboard
@@ -37,14 +37,16 @@ A learning-first Django application for collecting, reviewing, and prioritizing 
 - Recognize medical-device software, embedded software, firmware, controls, test automation, software quality, integration, and reliability as supported technical pathways
 - Compare saved matcher snapshots with current results through a dedicated calibration report
 - Measure fit agreement, lane agreement, improvements, regressions, changed scores, and unresolved disagreements
+- Use a controlled local semantic layer to recognize selected technical paraphrases without weakening hard requirements
 
 ## Transparent matching strategy
 
-The active matcher does not depend only on exact keyword overlap. It currently uses three reviewable layers:
+The active matcher does not depend only on exact keyword overlap. It currently uses four reviewable layers:
 
 1. **Exact evidence:** direct matches for degrees, tools, standards, role titles, and explicit requirements.
 2. **Normalized concepts:** aliases and abbreviations map to shared concepts, such as `V&V`, `verification and validation`, and `testing and validation`.
-3. **Role and skill relationships:** documented links connect related work such as test engineering, validation engineering, systems engineering, quality engineering, embedded software, firmware, and software testing.
+3. **Rule-based relationships:** documented links connect related work such as test engineering, validation engineering, systems engineering, quality engineering, embedded software, firmware, and software testing.
+4. **Controlled semantic evidence:** local technical tokens, bigrams, and version-controlled engineering concept families identify selected paraphrases that the explicit vocabulary misses.
 
 Each result shows:
 
@@ -52,17 +54,18 @@ Each result shows:
 - Evidence coverage
 - Category-level points
 - Direct supporting evidence
-- Related or transferable evidence
+- Rule-based transferable evidence
+- Controlled semantic evidence with the similarity reason and capped strength
 - Missing evidence
 - Confirmed conflicts and items that still require manual verification
 
-The matcher is deterministic and explainable. It does not use embeddings, an LLM, or an external API. Semantic similarity and AI-assisted extraction are later additions; they will improve recall without replacing the visible scoring rules.
+The matcher is deterministic and explainable. It does not use an LLM, external API, downloaded language model, or hidden prompt.
 
 ## Industry-first and software-aware strategy
 
 The first calibration cycle showed that exact role-family alignment was too strict for Amiri's actual search strategy. Medical-device product development remains the preferred destination, but entering the medical-device industry through a technically relevant function can create a credible path to an internal pivot.
 
-Matcher version `2.2-industry-first-software` uses these weights:
+Matcher version `2.3-controlled-semantic` uses these category weights:
 
 | Category | Weight |
 |---|---:|
@@ -79,6 +82,28 @@ Technical MedTech functions such as quality, product safety, validation, verific
 
 Commercial roles do not receive technical-function credit merely because the employer operates in medical devices. General software roles outside healthcare remain valid skill-based opportunities, but they do not automatically outrank strong medical-device roles in strategic priority.
 
+## Controlled semantic similarity
+
+The semantic layer only revisits selected gaps in:
+
+- Role alignment
+- Required and preferred skills
+- Education
+- Industry descriptions
+
+It uses local token, bigram, and engineering-family vectors. Examples of concept families include biosignal instrumentation, verification and engineering test, embedded software and controls, software test automation, regulated product development, systems requirements, manufacturing processes, and quality reliability.
+
+Semantic evidence is deliberately limited:
+
+- Maximum strength is `0.65`
+- It is always labeled separately from direct and rule-related evidence
+- It cannot satisfy experience requirements
+- It cannot override work-authorization conflicts
+- It cannot satisfy certifications, security clearances, licenses, or hard disqualifiers
+- It cannot independently turn a role into a direct priority match
+
+This allows the program to recognize related meaning while preserving conservative eligibility decisions.
+
 ## Calibration workflow
 
 The program should not assume its first scoring weights are correct. For each real posting:
@@ -87,7 +112,7 @@ The program should not assume its first scoring weights are correct. For each re
 2. Mark the role as a priority opportunity, adjacent opportunity, outside the current priority, or unsure.
 3. Save a brief note explaining your judgment.
 4. Compare the saved human judgment with the matcher's score and classification.
-5. Use a meaningful set of reviewed jobs before changing scoring weights or vocabulary relationships again.
+5. Use a meaningful set of reviewed jobs before changing scoring weights, vocabulary relationships, or semantic families again.
 
 A calibration stores the score, classification, and opportunity lane that existed when the human judgment was saved. This preserves the original baseline after matcher changes. Live dashboard and match-page scores use the newest strategy, while the saved calibration snapshot remains available for comparison. Saving the judgment again updates that snapshot to the current matcher version.
 
@@ -161,7 +186,7 @@ The `JobPosting`, `JobRequirement`, `CareerProfile`, and `JobCalibration` models
 
 ## Roadmap
 
-- **Stage 2 next:** inspect the remaining calibration-report disagreements and add controlled semantic similarity for vocabulary the explicit rules still miss
+- **Stage 2 next:** test the semantic matcher on a new unseen validation batch, record matcher versions in saved calibration snapshots, and add the candidate-evidence foundation for resume and LinkedIn review
 - **Stage 3:** tool-using AI agents that read the profile, analyze saved jobs, and review resume and LinkedIn content
 - **Stage 3 discovery expansion:** distinguish priority-role matches from adjacent opportunities that fit demonstrated background but are not the stated first choice
 - **Stage 4:** external job discovery, semantic retrieval, deduplication, scheduled searches, and notifications
