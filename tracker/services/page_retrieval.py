@@ -100,6 +100,17 @@ def _default_opener():
     )
 
 
+def _header_text(headers, name: str) -> str:
+    """Return one HTTP header as safe text.
+
+    Some real employer servers expose blank headers as ``None`` even when a mapping
+    default is supplied. Coercing here prevents transport evidence collection from
+    failing after an otherwise successful request.
+    """
+
+    return str(headers.get(name) or "").strip()
+
+
 class ControlledHttpRetriever:
     """Retrieve one public HTTP(S) page under strict, auditable limits.
 
@@ -132,7 +143,7 @@ class ControlledHttpRetriever:
             status_code = self._status_code(response)
 
             if status_code in self.REDIRECT_CODES:
-                location = response.headers.get("Location", "").strip()
+                location = _header_text(response.headers, "Location")
                 response.close()
                 if not location:
                     raise RetrievalRedirectError(
@@ -302,12 +313,12 @@ class ControlledHttpRetriever:
         redirect_chain: list[dict[str, Any]],
     ) -> RetrievedPage:
         headers = response.headers
-        raw_content_type = headers.get("Content-Type", "").strip()
+        raw_content_type = _header_text(headers, "Content-Type")
         content_type = raw_content_type.split(";", 1)[0].strip().casefold()
         charset = ""
         if hasattr(headers, "get_content_charset"):
             charset = headers.get_content_charset() or ""
-        content_encoding = headers.get("Content-Encoding", "").strip().casefold()
+        content_encoding = _header_text(headers, "Content-Encoding").casefold()
         content_length_header = self._content_length(headers.get("Content-Length"))
 
         if (
@@ -357,8 +368,8 @@ class ControlledHttpRetriever:
         response_headers = {
             "content_type": raw_content_type,
             "content_encoding": content_encoding,
-            "content_language": headers.get("Content-Language", "")[:200],
-            "server": headers.get("Server", "")[:200],
+            "content_language": _header_text(headers, "Content-Language")[:200],
+            "server": _header_text(headers, "Server")[:200],
         }
 
         return RetrievedPage(
