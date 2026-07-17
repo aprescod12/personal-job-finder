@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .forms import (
     CareerProfileForm,
     JobCalibrationForm,
+    JobListingVerificationForm,
     JobPostingForm,
     JobRequirementForm,
 )
@@ -48,6 +49,15 @@ SOURCE_FILTER_CHOICES = (
     ("validation", "Validation holdout"),
     ("calibration", "Original calibration batch"),
     ("other", "Manual and other jobs"),
+)
+
+LISTING_FILTER_CHOICES = (
+    ("", "All listing states"),
+    ("open", "Verified open"),
+    ("needs_verification", "Needs verification"),
+    ("deadline_soon", "Deadline within 7 days"),
+    ("unavailable", "Closed or expired"),
+    ("link_problem", "Broken link or wrong page"),
 )
 
 SORT_CHOICES = (
@@ -141,6 +151,28 @@ def _filter_by_review(jobs, selected_review):
     return jobs
 
 
+def _filter_by_listing(jobs, selected_listing):
+    if selected_listing == "open":
+        return [
+            job
+            for job in jobs
+            if job.listing_is_available and not job.listing_needs_verification
+        ]
+    if selected_listing == "needs_verification":
+        return [job for job in jobs if job.listing_needs_verification]
+    if selected_listing == "deadline_soon":
+        return [job for job in jobs if job.deadline_is_due_soon]
+    if selected_listing == "unavailable":
+        return [
+            job
+            for job in jobs
+            if job.listing_is_unavailable and not job.listing_has_link_problem
+        ]
+    if selected_listing == "link_problem":
+        return [job for job in jobs if job.listing_has_link_problem]
+    return jobs
+
+
 def _sort_jobs(jobs, selected_sort):
     if selected_sort == "match_high":
         return sorted(
@@ -196,6 +228,7 @@ def _filter_source(queryset, selected_source):
 
 def job_list(request):
     all_jobs = JobPosting.objects.all()
+    all_jobs_list = list(all_jobs)
     filtered_jobs = all_jobs
 
     query = request.GET.get("q", "").strip()
@@ -204,6 +237,7 @@ def job_list(request):
     selected_track = request.GET.get("track", "").strip()
     selected_review = request.GET.get("review", "").strip()
     selected_source = request.GET.get("source", "").strip()
+    selected_listing = request.GET.get("listing", "").strip()
     selected_sort = request.GET.get("sort", "newest").strip()
 
     if query:
@@ -213,6 +247,7 @@ def job_list(request):
             | Q(location__icontains=query)
             | Q(description__icontains=query)
             | Q(source__icontains=query)
+            | Q(listing_verification_notes__icontains=query)
             | Q(requirements__role_family__icontains=query)
             | Q(requirements__industry__icontains=query)
             | Q(requirements__required_skills__icontains=query)
@@ -228,6 +263,7 @@ def job_list(request):
     valid_track_values = {value for value, _ in TRACK_FILTER_CHOICES}
     valid_review_values = {value for value, _ in REVIEW_FILTER_CHOICES}
     valid_source_values = {value for value, _ in SOURCE_FILTER_CHOICES}
+    valid_listing_values = {value for value, _ in LISTING_FILTER_CHOICES}
     valid_sort_values = {value for value, _ in SORT_CHOICES}
 
     if selected_fit not in valid_fit_values:
@@ -238,6 +274,8 @@ def job_list(request):
         selected_review = ""
     if selected_source not in valid_source_values:
         selected_source = ""
+    if selected_listing not in valid_listing_values:
+        selected_listing = ""
     if selected_sort not in valid_sort_values:
         selected_sort = "newest"
 
@@ -245,6 +283,7 @@ def job_list(request):
 
     profile = CareerProfile.get_solo()
     jobs = _attach_match_data(list(filtered_jobs), profile)
+    jobs = _filter_by_listing(jobs, selected_listing)
     jobs = _filter_by_fit(jobs, selected_fit)
     jobs = _filter_by_track(jobs, selected_track)
     jobs = _filter_by_review(jobs, selected_review)
@@ -264,7 +303,11 @@ def job_list(request):
         job.match_result.has_requirements for job in visible_jobs
     )
     strong_count = sum(
-        job.match_result.classification in {"STRONG MATCH", "GOOD MATCH"}
+        job.match_result.classification == "STRONG MATCH"
+        for job in visible_jobs
+    )
+    good_count = sum(
+        job.match_result.classification == "GOOD MATCH"
         for job in visible_jobs
     )
     reviewed_count = sum(bool(job.calibration_record) for job in jobs)
@@ -278,18 +321,31 @@ def job_list(request):
         "selected_track": selected_track,
         "selected_review": selected_review,
         "selected_source": selected_source,
+        "selected_listing": selected_listing,
         "selected_sort": selected_sort,
         "status_choices": JobPosting.Status.choices,
         "fit_filter_choices": FIT_FILTER_CHOICES,
         "track_filter_choices": TRACK_FILTER_CHOICES,
         "review_filter_choices": REVIEW_FILTER_CHOICES,
         "source_filter_choices": SOURCE_FILTER_CHOICES,
+        "listing_filter_choices": LISTING_FILTER_CHOICES,
         "sort_choices": SORT_CHOICES,
-        "total_jobs": all_jobs.count(),
+        "total_jobs": len(all_jobs_list),
         "analyzed_jobs": analyzed_count,
         "strong_jobs": strong_count,
+        "good_jobs": good_count,
         "reviewed_jobs": reviewed_count,
         "blind_jobs": blind_count,
+        "verified_open_jobs": sum(
+            job.listing_is_available and not job.listing_needs_verification
+            for job in all_jobs_list
+        ),
+        "verification_needed_jobs": sum(
+            job.listing_needs_verification for job in all_jobs_list
+        ),
+        "deadline_soon_jobs": sum(
+            job.deadline_is_due_soon for job in all_jobs_list
+        ),
         "blind_sort_reset": blind_sort_reset,
     }
     return render(request, "tracker/job_list.html", context)
@@ -337,6 +393,34 @@ def job_detail(request, job_id):
             "match_result": match_result,
             "calibration": calibration,
             "blind_validation": blind_validation,
+        },
+    )
+
+
+def job_listing_verify(request, job_id):
+    job = get_object_or_404(JobPosting, id=job_id)
+
+    if request.method == "POST":
+        form = JobListingVerificationForm(request.POST, instance=job)
+        if form.is_valid():
+            job = form.save()
+            messages.success(
+                request,
+                (
+                    f"Listing verification saved as {job.effective_listing_status_label}. "
+                    f"Last checked {job.listing_last_verified:%b %d, %Y}."
+                ),
+            )
+            return redirect("job_detail", job_id=job.id)
+    else:
+        form = JobListingVerificationForm(instance=job)
+
+    return render(
+        request,
+        "tracker/job_listing_verify.html",
+        {
+            "job": job,
+            "form": form,
         },
     )
 
