@@ -1,0 +1,52 @@
+{% extends "tracker/base.html" %}
+
+{% block title %}Verify Listing · {{ job.title }}{% endblock %}
+
+{% block content %}
+<p><a class="text-link" href="{% url 'job_detail' job.id %}">← BACK TO JOB</a></p>
+
+<section class="page-heading listing-verification-heading">
+    <div>
+        <p class="eyebrow">STAGE 02 / LISTING RELIABILITY</p>
+        <h1>VERIFY BEFORE APPLYING.</h1>
+        <p class="muted">Confirm that the link opens the exact employer job page, record whether the role is still open, and capture the real deadline status.</p>
+    </div>
+    <div class="listing-verification-current listing-state-{{ job.effective_listing_status }}">
+        <span>CURRENT RECORD</span>
+        <strong>{{ job.effective_listing_status_label }}</strong>
+        <small>{% if job.listing_last_verified %}Last checked {{ job.listing_last_verified|date:"M j, Y" }}{% else %}Never verified{% endif %}</small>
+    </div>
+</section>
+
+<section class="panel listing-verification-checklist">
+    <p class="eyebrow">VERIFICATION CHECKLIST</p>
+    <div class="listing-check-grid">
+        <div><strong>1</strong><span>Open the recorded URL.</span></div>
+        <div><strong>2</strong><span>Confirm it is the exact role on the employer website.</span></div>
+        <div><strong>3</strong><span>Confirm whether applications are still accepted.</span></div>
+        <div><strong>4</strong><span>Record the deadline as confirmed, rolling, not stated, or unknown.</span></div>
+    </div>
+    {% if job.job_url %}
+        <a class="button button-secondary" href="{{ job.job_url }}" target="_blank" rel="noopener noreferrer">OPEN RECORDED LINK</a>
+    {% endif %}
+</section>
+
+<section class="panel form-panel listing-verification-form-panel">
+    <form method="post" class="stacked-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="field-error">{{ form.non_field_errors }}</div>{% endif %}
+        {% for field in form %}
+            <div class="form-field">
+                <label for="{{ field.id_for_label }}">{{ field.label|upper }}</label>
+                {{ field }}
+                {% if field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
+                {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+        {% endfor %}
+        <div class="form-actions">
+            <button class="button button-primary" type="submit">SAVE VERIFICATION</button>
+            <a class="text-link" href="{% url 'job_detail' job.id %}">CANCEL</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
