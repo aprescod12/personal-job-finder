@@ -7,13 +7,26 @@
     <div>
         <p class="eyebrow">STAGE 02 / CALIBRATION REPORT</p>
         <h1>MEASURE THE MATCHER.</h1>
-        <p class="muted">Compare your saved human judgments with the current industry-first, software-aware matcher. Saved snapshots remain unchanged so strategy improvements can be evaluated honestly.</p>
+        <p class="muted">Compare saved human judgments with the current matcher. Use the unseen validation scope to measure performance on jobs that were not used to tune the scoring strategy.</p>
     </div>
     <div class="calibration-version-card">
         <span>CURRENT MATCHER</span>
         <strong>{{ report.matcher_version }}</strong>
-        <small>{{ report.reviewed_count }} reviewed job{{ report.reviewed_count|pluralize }}</small>
+        <small>{{ report.reviewed_count }} reviewed job{{ report.reviewed_count|pluralize }} in this scope</small>
     </div>
+</section>
+
+<section class="panel validation-progress-panel{% if validation_complete %} validation-progress-complete{% endif %}">
+    <div>
+        <p class="eyebrow">UNSEEN HOLDOUT PROGRESS</p>
+        <h2>{{ validation_reviewed }} / {{ validation_total }} BLIND REVIEWS COMPLETE</h2>
+        <p>{% if validation_complete %}The holdout batch is complete. Filter this report to Unseen validation holdout before deciding whether the matcher is ready to freeze.{% else %}Keep the matcher rules unchanged until all holdout judgments are saved. Scores remain hidden on unreviewed validation jobs.{% endif %}</p>
+    </div>
+    {% if not validation_complete %}
+        <a class="button button-primary" href="{% url 'job_list' %}?source=validation&review=unreviewed&sort=company">CONTINUE BLIND REVIEW</a>
+    {% else %}
+        <a class="button button-primary" href="{% url 'calibration_report' %}?scope=validation">VIEW HOLDOUT RESULTS</a>
+    {% endif %}
 </section>
 
 <section class="stats-grid calibration-report-stats" aria-label="Calibration statistics">
@@ -43,7 +56,7 @@
     <div>
         <p class="eyebrow">STRATEGY CHANGE CHECK</p>
         <h2>{{ report.strategy_changed_count }} RESULT{{ report.strategy_changed_count|pluralize }} CHANGED</h2>
-        <p>The report compares the current score, fit classification, and opportunity lane with the snapshot saved when you entered each judgment. A changed result is not automatically better; the human agreement columns show whether the change improved the matcher.</p>
+        <p>The report compares the current score, fit classification, and opportunity lane with the snapshot saved when each judgment was entered. A changed result is not automatically better; the agreement columns show whether the change improved the matcher.</p>
     </div>
     {% if report.regressed_count %}
         <div class="calibration-warning-card">
@@ -56,6 +69,14 @@
 
 <form method="get" class="filter-bar calibration-report-filter">
     <div class="filter-field">
+        <label for="id_scope">DATASET</label>
+        <select id="id_scope" name="scope">
+            {% for value, label in scope_choices %}
+                <option value="{{ value }}" {% if selected_scope == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-field">
         <label for="id_status">REPORT VIEW</label>
         <select id="id_status" name="status">
             {% for value, label in filter_choices %}
@@ -65,7 +86,7 @@
     </div>
     <div class="filter-actions">
         <button class="button button-secondary" type="submit">APPLY VIEW</button>
-        {% if selected_filter %}<a class="text-link" href="{% url 'calibration_report' %}">CLEAR</a>{% endif %}
+        {% if selected_filter or selected_scope %}<a class="text-link" href="{% url 'calibration_report' %}">CLEAR</a>{% endif %}
     </div>
 </form>
 
@@ -78,6 +99,7 @@
                 <p class="eyebrow">{{ row.change_status }}</p>
                 <h2><a href="{% url 'job_match' row.job.id %}">{{ row.job.title }}</a></h2>
                 <p class="company-name">{{ row.job.company }}</p>
+                <small class="muted">{{ row.job.source|default:"Manual review" }}</small>
             </div>
             <div class="calibration-delta{% if row.score_delta > 0 %} calibration-delta-up{% elif row.score_delta < 0 %} calibration-delta-down{% endif %}">
                 <span>SCORE CHANGE</span>
@@ -133,9 +155,9 @@
 </section>
 {% else %}
 <section class="empty-state calibration-report-empty">
-    <h2>{% if report.reviewed_count %}NO RESULTS IN THIS VIEW{% else %}NO CALIBRATIONS YET{% endif %}</h2>
-    <p>{% if report.reviewed_count %}Choose a different report filter to inspect your saved judgments.{% else %}Open a job's match analysis and save your independent fit and opportunity-lane judgment. The report will then compare that snapshot with the current matcher.{% endif %}</p>
-    <a class="button button-primary" href="{% url 'job_list' %}?review=unreviewed&sort=match_high">{% if report.reviewed_count %}BACK TO DASHBOARD{% else %}REVIEW JOBS{% endif %}</a>
+    <h2>{% if report.reviewed_count %}NO RESULTS IN THIS VIEW{% else %}NO CALIBRATIONS IN THIS DATASET{% endif %}</h2>
+    <p>{% if report.reviewed_count %}Choose a different report filter to inspect the saved judgments.{% elif selected_scope == 'validation' %}Complete at least one blind holdout review before this dataset can be measured.{% else %}Open a job's match analysis and save an independent fit and opportunity-lane judgment.{% endif %}</p>
+    <a class="button button-primary" href="{% url 'job_list' %}?{% if selected_scope == 'validation' %}source=validation&{% endif %}review=unreviewed&sort=company">REVIEW JOBS</a>
 </section>
 {% endif %}
 {% endblock %}
