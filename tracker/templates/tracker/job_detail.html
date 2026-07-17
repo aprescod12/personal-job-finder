@@ -8,16 +8,42 @@
 <section class="detail-header panel{% if blind_validation %} blind-validation-header{% endif %}">
     <div>
         <span class="status-badge status-{{ job.status }}">{{ job.get_status_display }}</span>
+        <span class="listing-status-badge listing-state-{{ job.effective_listing_status }}">{{ job.effective_listing_status_label }}</span>
         {% if blind_validation %}<span class="validation-badge">BLIND HOLDOUT</span>{% endif %}
         <h1>{{ job.title }}</h1>
         <p class="detail-company">{{ job.company }}</p>
     </div>
     <div class="detail-actions">
+        <a class="button button-primary" href="{% url 'job_listing_verify' job.id %}">VERIFY LISTING</a>
         <a class="button button-primary" href="{% url 'job_match' job.id %}">{% if blind_validation %}RECORD BLIND REVIEW{% else %}MATCH ANALYSIS{% endif %}</a>
         <a class="button button-accent" href="{% url 'job_requirements' job.id %}">JOB REQUIREMENTS</a>
         <a class="button button-secondary" href="{% url 'job_edit' job.id %}">EDIT</a>
         <a class="button button-danger" href="{% url 'job_delete' job.id %}">DELETE</a>
     </div>
+</section>
+
+<section class="panel listing-reliability-panel listing-state-{{ job.effective_listing_status }}{% if job.listing_needs_verification %} listing-health-stale{% endif %}">
+    <div>
+        <p class="eyebrow">LISTING RELIABILITY</p>
+        <h2>{% if job.listing_needs_verification %}VERIFY THIS ROLE BEFORE APPLYING{% else %}{{ job.effective_listing_status_label|upper }}{% endif %}</h2>
+        <p>
+            {% if job.listing_has_link_problem %}
+                The saved URL is not a reliable direct application page. Find the exact employer listing before treating this as actionable.
+            {% elif job.listing_is_unavailable %}
+                This role is recorded as unavailable. Keep it for calibration history, but do not treat it as an active application target.
+            {% elif job.listing_needs_verification %}
+                The role has not been checked recently, the deadline is unknown, or the listing has never been verified on the employer website.
+            {% else %}
+                The direct employer page and deadline status have been checked recently.
+            {% endif %}
+        </p>
+    </div>
+    <div class="listing-reliability-facts">
+        <div><span>STATUS</span><strong>{{ job.effective_listing_status_label }}</strong></div>
+        <div><span>LAST VERIFIED</span><strong>{{ job.listing_last_verified|date:"M j, Y"|default:"Never" }}</strong></div>
+        <div class="{% if job.deadline_is_overdue %}deadline-overdue{% elif job.deadline_is_due_soon %}deadline-urgent{% endif %}"><span>DEADLINE</span><strong>{{ job.deadline_label }}</strong></div>
+    </div>
+    {% if job.listing_verification_notes %}<p class="listing-verification-note"><strong>VERIFICATION NOTE:</strong> {{ job.listing_verification_notes }}</p>{% endif %}
 </section>
 
 <section class="detail-grid">
@@ -30,17 +56,21 @@
             <div><dt>SALARY</dt><dd>{{ job.salary_text|default:"Not provided" }}</dd></div>
             <div><dt>SOURCE</dt><dd>{{ job.source|default:"Not provided" }}</dd></div>
             <div><dt>DATE POSTED</dt><dd>{{ job.date_posted|date:"M j, Y"|default:"Not provided" }}</dd></div>
-            <div><dt>DEADLINE</dt><dd>{{ job.application_deadline|date:"M j, Y"|default:"Not provided" }}</dd></div>
+            <div><dt>DEADLINE STATUS</dt><dd>{{ job.get_deadline_status_display }}</dd></div>
+            <div><dt>CONFIRMED DEADLINE</dt><dd>{{ job.application_deadline|date:"M j, Y"|default:"Not provided" }}</dd></div>
         </dl>
         {% if job.job_url %}
-            <a class="button button-primary full-width" href="{{ job.job_url }}" target="_blank" rel="noopener noreferrer">OPEN ORIGINAL POSTING</a>
+            <a class="button {% if job.listing_is_available and not job.listing_needs_verification %}button-primary{% else %}button-secondary{% endif %} full-width" href="{{ job.job_url }}" target="_blank" rel="noopener noreferrer">{% if job.listing_is_available and not job.listing_needs_verification %}OPEN VERIFIED POSTING{% else %}CHECK RECORDED LINK{% endif %}</a>
+        {% else %}
+            <a class="button button-danger full-width" href="{% url 'job_listing_verify' job.id %}">ADD DIRECT EMPLOYER LINK</a>
         {% endif %}
     </article>
 
     <article class="panel">
         <h2>APPLICATION PLAN</h2>
         <dl class="detail-list">
-            <div><dt>STATUS</dt><dd>{{ job.get_status_display }}</dd></div>
+            <div><dt>APPLICATION STATUS</dt><dd>{{ job.get_status_display }}</dd></div>
+            <div><dt>LISTING STATUS</dt><dd>{{ job.effective_listing_status_label }}</dd></div>
             <div><dt>NEXT ACTION</dt><dd>{{ job.next_action|default:"No next action set" }}</dd></div>
             <div><dt>ACTION DATE</dt><dd>{{ job.next_action_date|date:"M j, Y"|default:"Not scheduled" }}</dd></div>
             <div><dt>LAST UPDATED</dt><dd>{{ job.updated_at|date:"M j, Y, g:i a" }}</dd></div>
@@ -55,7 +85,7 @@
         {% if blind_validation %}
             <p>Review the posting and structured requirements first. The score, classification, lane, and evidence are hidden until your independent judgment is saved.</p>
         {% elif match_result.has_requirements %}
-            <p>The score uses your career profile, structured requirements, explicit vocabulary relationships, and controlled semantic evidence. Review the evidence before deciding whether to apply.</p>
+            <p>The score uses your career profile, structured requirements, explicit vocabulary relationships, and controlled semantic evidence. Listing reliability is tracked separately because a strong fit can still be closed or inaccessible.</p>
             <div class="match-summary-stats">
                 <span>{{ match_result.evidence_coverage }}% COVERAGE</span>
                 <span>{{ match_result.direct_matches|length }} DIRECT</span>

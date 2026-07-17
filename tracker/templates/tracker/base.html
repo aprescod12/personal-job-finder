@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="{% static 'tracker/semantic.css' %}">
     <link rel="stylesheet" href="{% static 'tracker/validation.css' %}">
     <link rel="stylesheet" href="{% static 'tracker/weight_comparison.css' %}">
+    <link rel="stylesheet" href="{% static 'tracker/listing_reliability.css' %}">
+    <link rel="stylesheet" href="{% static 'tracker/global_listing_warning.css' %}">
 </head>
 <body>
     <header class="site-header">
@@ -41,6 +43,16 @@
         </div>
     {% endif %}
 
+    {% if job and job.listing_needs_verification or job and job.listing_is_unavailable %}
+        <div class="container global-listing-warning listing-state-{{ job.effective_listing_status }}">
+            <div>
+                <strong>{% if job.listing_needs_verification %}LISTING VERIFICATION REQUIRED{% else %}LISTING {{ job.effective_listing_status_label|upper }}{% endif %}</strong>
+                <span>Confirm the direct employer page and deadline before treating this role as actionable.</span>
+            </div>
+            <a class="button button-secondary" href="{% url 'job_listing_verify' job.id %}">VERIFY LISTING</a>
+        </div>
+    {% endif %}
+
     <main class="container page-shell">
         {% block content %}{% endblock %}
     </main>
@@ -48,7 +60,7 @@
     <footer class="site-footer">
         <div class="container footer-row">
             <span>AMIRI'S JOB FINDER / STAGE 02</span>
-            <span class="footer-code">PROFILE · REQUIREMENTS · MATCH · CALIBRATE · ACT</span>
+            <span class="footer-code">VERIFY · PROFILE · REQUIREMENTS · MATCH · CALIBRATE · ACT</span>
         </div>
     </footer>
 </body>

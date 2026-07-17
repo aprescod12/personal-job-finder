@@ -1,0 +1,222 @@
+.listing-stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+}
+
+.listing-status-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    border: 2px solid var(--ink);
+    padding: 4px 8px;
+    font-size: 0.66rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.listing-state-open { background: var(--lime); }
+.listing-state-unverified { background: var(--sky); }
+.listing-state-closed,
+.listing-state-expired { background: #dedee5; }
+.listing-state-link_broken,
+.listing-state-wrong_page { background: var(--coral); }
+
+.listing-unavailable-card {
+    opacity: 0.86;
+    border-color: #6e6e78;
+}
+
+.listing-needs-verification-card {
+    border-left: 9px solid var(--sky);
+}
+
+.listing-health-strip,
+.deadline-strip {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    border: 2px solid var(--ink);
+    padding: 12px;
+}
+
+.listing-health-strip > div,
+.deadline-strip {
+    align-content: start;
+}
+
+.listing-health-strip span,
+.listing-health-strip strong,
+.listing-health-strip small,
+.deadline-strip span,
+.deadline-strip strong,
+.deadline-strip small,
+.listing-reliability-facts span,
+.listing-reliability-facts strong,
+.listing-verification-current span,
+.listing-verification-current strong,
+.listing-verification-current small {
+    display: block;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.listing-health-strip span,
+.deadline-strip span,
+.listing-reliability-facts span,
+.listing-verification-current span,
+.listing-verification-current small {
+    color: var(--muted);
+    font-size: 0.65rem;
+    font-weight: 850;
+}
+
+.listing-health-strip strong,
+.deadline-strip strong,
+.listing-reliability-facts strong {
+    margin-top: 3px;
+    font-size: 0.82rem;
+}
+
+.listing-health-strip small,
+.deadline-strip small {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 0.66rem;
+    font-weight: 750;
+}
+
+.listing-health-stale {
+    background: var(--sky);
+}
+
+.deadline-strip {
+    grid-template-columns: 1fr;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.deadline-urgent {
+    background: #fff09f !important;
+}
+
+.deadline-overdue {
+    background: var(--coral) !important;
+}
+
+.listing-reliability-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 22px;
+    align-items: start;
+    margin-bottom: 24px;
+}
+
+.listing-reliability-panel h2 {
+    margin: 5px 0 10px;
+}
+
+.listing-reliability-panel p {
+    margin-bottom: 0;
+}
+
+.listing-reliability-facts {
+    display: grid;
+    min-width: 250px;
+    gap: 10px;
+}
+
+.listing-reliability-facts > div {
+    border: 2px solid var(--ink);
+    background: rgba(255, 255, 255, 0.8);
+    padding: 11px;
+}
+
+.listing-verification-note {
+    grid-column: 1 / -1;
+    border-top: 2px solid var(--ink);
+    padding-top: 14px;
+}
+
+.listing-verification-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 24px;
+    align-items: end;
+}
+
+.listing-verification-current {
+    display: grid;
+    min-width: 230px;
+    gap: 5px;
+    border: 3px solid var(--ink);
+    padding: 15px;
+    box-shadow: 5px 5px 0 var(--ink);
+}
+
+.listing-verification-current strong {
+    font-size: 1rem;
+}
+
+.listing-verification-checklist {
+    margin-bottom: 24px;
+}
+
+.listing-check-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 14px 0 18px;
+}
+
+.listing-check-grid > div {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: start;
+    border: 2px solid var(--ink);
+    background: rgba(255, 255, 255, 0.75);
+    padding: 12px;
+}
+
+.listing-check-grid strong {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--ink);
+    background: var(--lime);
+}
+
+.listing-check-grid span {
+    font-size: 0.8rem;
+    font-weight: 750;
+}
+
+.listing-verification-form-panel {
+    max-width: 850px;
+}
+
+@media (max-width: 900px) {
+    .listing-check-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .listing-reliability-panel,
+    .listing-verification-heading {
+        grid-template-columns: 1fr;
+    }
+
+    .listing-reliability-facts,
+    .listing-verification-current {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 520px) {
+    .listing-check-grid,
+    .listing-health-strip {
+        grid-template-columns: 1fr;
+    }
+}

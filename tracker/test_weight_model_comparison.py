@@ -6,6 +6,7 @@ from django.urls import reverse
 from .models import CareerProfile, JobCalibration, JobPosting, JobRequirement
 from .services.matching import CategoryScore, MatchResult
 from .services.weight_model_comparison import (
+    LIVE_MODEL_KEY,
     MODEL_A_KEY,
     MODEL_B_KEY,
     build_weight_model_comparison,
@@ -92,7 +93,7 @@ class WeightModelComparisonTests(TestCase):
     def test_model_b_can_improve_holdout_agreement(self, analyze):
         self.make_calibration(
             "Skills-sensitive role",
-            JobCalibration.HumanRating.STRONG,
+            JobCalibration.HumanRating.GOOD,
         )
         analyze.return_value = self.result_with_fractions(0.9, 0.2)
 
@@ -107,7 +108,8 @@ class WeightModelComparisonTests(TestCase):
         self.assertEqual(comparison.model_a.agreement_count, 0)
         self.assertEqual(comparison.model_b.agreement_count, 1)
         self.assertEqual(comparison.recommended_model_key, MODEL_B_KEY)
-        self.assertEqual(comparison.recommendation, "ADOPT MODEL B")
+        self.assertEqual(comparison.recommendation, "MODEL B PERFORMED BETTER")
+        self.assertEqual(comparison.live_model_key, MODEL_A_KEY)
 
     @patch(
         "tracker.services.weight_model_comparison.strategy_matching.analyze_job_match"
@@ -115,7 +117,7 @@ class WeightModelComparisonTests(TestCase):
     def test_model_a_is_kept_when_industry_weight_performs_better(self, analyze):
         self.make_calibration(
             "Industry-sensitive role",
-            JobCalibration.HumanRating.STRONG,
+            JobCalibration.HumanRating.GOOD,
         )
         analyze.return_value = self.result_with_fractions(
             0.2,
@@ -131,7 +133,8 @@ class WeightModelComparisonTests(TestCase):
         self.assertEqual(comparison.model_a.agreement_count, 1)
         self.assertEqual(comparison.model_b.agreement_count, 0)
         self.assertEqual(comparison.recommended_model_key, MODEL_A_KEY)
-        self.assertEqual(comparison.recommendation, "KEEP MODEL A")
+        self.assertEqual(comparison.recommendation, "MODEL A PERFORMED BETTER")
+        self.assertEqual(LIVE_MODEL_KEY, MODEL_A_KEY)
 
     @patch(
         "tracker.services.weight_model_comparison.strategy_matching.analyze_job_match"
@@ -176,6 +179,7 @@ class WeightModelComparisonTests(TestCase):
         self.assertFalse(comparison.validation_complete)
         self.assertEqual(comparison.recommended_model_key, "")
         self.assertEqual(comparison.recommendation, "HOLDOUT INCOMPLETE")
+        self.assertEqual(comparison.live_model_key, MODEL_A_KEY)
 
     @patch(
         "tracker.services.weight_model_comparison.strategy_matching.analyze_job_match"
@@ -201,7 +205,7 @@ class WeightModelComparisonTests(TestCase):
     def test_comparison_page_renders_both_models(self, analyze):
         self.make_calibration(
             "Rendered role",
-            JobCalibration.HumanRating.STRONG,
+            JobCalibration.HumanRating.GOOD,
         )
         analyze.return_value = self.result_with_fractions(0.9, 0.2)
 

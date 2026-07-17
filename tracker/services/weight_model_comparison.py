@@ -10,6 +10,7 @@ from . import strategy_matching
 
 MODEL_A_KEY = "industry_balanced"
 MODEL_B_KEY = "skills_priority"
+LIVE_MODEL_KEY = MODEL_A_KEY
 
 MODEL_A_LABEL = "Model A · Balanced industry and skills"
 MODEL_B_LABEL = "Model B · Required-skills priority"
@@ -35,7 +36,8 @@ RATING_ORDER = {
     JobCalibration.HumanRating.NOT_ELIGIBLE: 0,
     JobCalibration.HumanRating.WEAK: 1,
     JobCalibration.HumanRating.POSSIBLE: 2,
-    JobCalibration.HumanRating.STRONG: 3,
+    JobCalibration.HumanRating.GOOD: 3,
+    JobCalibration.HumanRating.STRONG: 4,
 }
 
 TRACK_TO_OPPORTUNITY = {
@@ -131,6 +133,7 @@ class WeightModelComparison:
     recommendation: str
     recommendation_detail: str
     recommended_model_key: str
+    live_model_key: str = LIVE_MODEL_KEY
 
 
 def _classification_to_human_rating(classification):
@@ -223,6 +226,7 @@ def _model_metrics(model_key, model_label, weights, rows, prediction_attribute):
                 and calibration.human_rating
                 in {
                     JobCalibration.HumanRating.STRONG,
+                    JobCalibration.HumanRating.GOOD,
                     JobCalibration.HumanRating.POSSIBLE,
                 }
             ):
@@ -379,28 +383,28 @@ def build_weight_model_comparison(profile, *, expected_count=10):
         recommendation = "HOLDOUT INCOMPLETE"
         recommendation_detail = (
             f"Only {len(rows)} of {expected_count} validation judgments are available. "
-            "Do not change the live matcher yet."
+            "Model A remains live and Model B remains experimental."
         )
         recommended_model_key = ""
     elif model_b_key > model_a_key:
-        recommendation = "ADOPT MODEL B"
+        recommendation = "MODEL B PERFORMED BETTER"
         recommendation_detail = (
-            "The 25-point required-skills model performed better on the completed "
-            "holdout under the documented comparison rules."
+            "The 25-point required-skills model performed better on this holdout, but "
+            "Model A remains the live matcher by the current product decision."
         )
         recommended_model_key = MODEL_B_KEY
     elif model_a_key > model_b_key:
-        recommendation = "KEEP MODEL A"
+        recommendation = "MODEL A PERFORMED BETTER"
         recommendation_detail = (
-            "The existing balanced model performed better on the completed holdout. "
-            "The proposed weight change should not become live."
+            "The active balanced model performed better on the completed holdout. "
+            "Model B remains available for future comparison."
         )
         recommended_model_key = MODEL_A_KEY
     else:
         recommendation = "NO MEASURED ADVANTAGE"
         recommendation_detail = (
-            "The models performed equally on the completed holdout. Keep the current "
-            "weights unless a larger validation set provides stronger evidence."
+            "The models performed equally on the completed holdout. Model A remains "
+            "live while Model B is retained as an experimental comparison."
         )
         recommended_model_key = MODEL_A_KEY
 
@@ -428,5 +432,6 @@ __all__ = (
     "MODEL_B_WEIGHTS",
     "MODEL_A_KEY",
     "MODEL_B_KEY",
+    "LIVE_MODEL_KEY",
     "build_weight_model_comparison",
 )

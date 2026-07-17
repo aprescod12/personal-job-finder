@@ -1,0 +1,33 @@
+.global-listing-warning {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: center;
+    margin-top: 18px;
+    border: 3px solid var(--ink);
+    padding: 14px 16px;
+    box-shadow: 5px 5px 0 var(--ink);
+}
+
+.global-listing-warning strong,
+.global-listing-warning span {
+    display: block;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.global-listing-warning strong {
+    margin-bottom: 4px;
+    font-size: 0.84rem;
+}
+
+.global-listing-warning span {
+    font-size: 0.7rem;
+    font-weight: 750;
+}
+
+@media (max-width: 620px) {
+    .global-listing-warning {
+        grid-template-columns: 1fr;
+    }
+}

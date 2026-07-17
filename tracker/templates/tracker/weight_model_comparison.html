@@ -7,12 +7,12 @@
 
 <section class="page-heading weight-comparison-heading">
     <div>
-        <p class="eyebrow">STAGE 02 / HOLDOUT MODEL SELECTION</p>
+        <p class="eyebrow">STAGE 02 / HOLDOUT MODEL COMPARISON</p>
         <h1>COMPARE THE WEIGHTS.</h1>
-        <p class="muted">Both models are evaluated against the same saved unseen-validation judgments. This page is read-only and does not change the live matcher.</p>
+        <p class="muted">Model A remains the live matcher. Model B is retained as an experimental alternative so future validation sets can be compared without losing the original strategy.</p>
     </div>
     <div class="weight-recommendation weight-recommendation-{{ comparison.recommended_model_key|default:'pending' }}">
-        <span>MEASURED RECOMMENDATION</span>
+        <span>HOLDOUT PERFORMANCE</span>
         <strong>{{ comparison.recommendation }}</strong>
         <small>{{ comparison.recommendation_detail }}</small>
     </div>
@@ -20,9 +20,9 @@
 
 <section class="panel weight-validation-status">
     <div>
-        <p class="eyebrow">HOLDOUT COMPLETION</p>
-        <h2>{{ comparison.reviewed_count }} / {{ comparison.expected_count }} JUDGMENTS AVAILABLE</h2>
-        <p>{% if comparison.validation_complete %}The comparison is based on the completed holdout. The original judgments are not modified.{% else %}Complete the remaining blind reviews before using this report to change the live matcher.{% endif %}</p>
+        <p class="eyebrow">CURRENT PRODUCT DECISION</p>
+        <h2>MODEL A IS LIVE · MODEL B IS RETAINED</h2>
+        <p>The measured comparison remains available, but no report result automatically changes the live matcher. Model A uses 20 points for required skills and 20 for industry.</p>
     </div>
     <div class="weight-outcome-counts">
         <div><span>MODEL B CLOSER</span><strong>{{ comparison.model_b_wins }}</strong></div>
@@ -40,7 +40,10 @@
                 <p class="eyebrow">{{ model.model_key|upper }}</p>
                 <h2>{{ model.model_label }}</h2>
             </div>
-            {% if comparison.recommended_model_key == model.model_key %}<span class="validation-badge">RECOMMENDED</span>{% endif %}
+            <div>
+                {% if comparison.live_model_key == model.model_key %}<span class="validation-badge">LIVE MODEL</span>{% endif %}
+                {% if comparison.recommended_model_key == model.model_key %}<span class="validation-badge">HOLDOUT LEADER</span>{% endif %}
+            </div>
         </div>
 
         <div class="weight-table">
@@ -107,7 +110,7 @@
 {% endif %}
 
 <section class="panel match-method-note">
-    <h2>HOW THE RECOMMENDATION IS CHOSEN</h2>
-    <p>The comparison prioritizes exact fit-rating agreement, then fewer false strong matches, fewer false disqualifications, fewer false weak matches, and lower average rating distance. Opportunity-lane logic is held constant because this experiment changes only required-skills and industry weights.</p>
+    <h2>HOW THE COMPARISON IS CHOSEN</h2>
+    <p>The comparison prioritizes exact five-level fit agreement—Strong, Good, Possible, Weak, or Not eligible—then fewer false strong matches, fewer false disqualifications, fewer false weak matches, and lower average rating distance. The comparison does not change the active model.</p>
 </section>
 {% endblock %}
