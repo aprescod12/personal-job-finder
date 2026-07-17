@@ -9,7 +9,7 @@
     <div>
         <p class="eyebrow">STAGE 03 / VERIFICATION RUN</p>
         <h1>{{ job.title }}</h1>
-        <p class="muted">{{ job.company }} · Manual verification request</p>
+        <p class="muted">{{ job.company }} · Optional automated evidence</p>
     </div>
     <div class="verification-run-status verification-run-status-{{ run.status }}">
         <span>RUN STATUS</span>
@@ -20,30 +20,19 @@
 
 <section class="panel verification-run-scope">
     <div>
-        <p class="eyebrow">CURRENT STEP</p>
-        <h2>EMPLOYER-PAGE INTERPRETATION</h2>
+        <p class="eyebrow">PRODUCT BOUNDARY</p>
+        <h2>AUTO-CHECK IS OPTIONAL BETA FUNCTIONALITY</h2>
         {% if run.status == 'failed' %}
-            <p>The controlled employer-page check failed before a usable interpretation could be produced. Review the error and saved link before trying again.</p>
+            <p>This run failed, but the normal job-tracking workflow is still available. Review the role manually and apply the correct status from the review screen.</p>
         {% elif run.structured_evidence.interpretation_performed %}
-            <p>The saved employer page was retrieved under strict safety limits and interpreted using explicit deterministic signals. The result is evidence for your decision; human review is required before the current job record is changed.</p>
+            <p>The page was retrieved and interpreted. Treat this as supporting evidence only; nothing changes until you review and apply the result.</p>
         {% else %}
-            <p>This older run contains transport evidence only. It did not interpret role identity, listing availability, application actions, or deadlines.</p>
+            <p>This run contains limited evidence. Manual verification remains the reliable source of truth.</p>
         {% endif %}
     </div>
     <div class="verification-scope-badge">
-        {% if run.status == 'failed' %}
-            <strong>VERIFICATION FAILED</strong>
-            <span>Review the recorded error before trying again.</span>
-        {% elif run.structured_evidence.interpretation_performed %}
-            <strong>DETERMINISTIC ANALYSIS</strong>
-            <span>No LLM or external AI model was used in this step.</span>
-        {% elif run.structured_evidence.network_request_performed %}
-            <strong>RETRIEVAL ONLY</strong>
-            <span>Run a new verification to interpret this page.</span>
-        {% else %}
-            <strong>NO COMPLETED REQUEST</strong>
-            <span>The run ended before page evidence was available.</span>
-        {% endif %}
+        <strong>{% if run.status == 'failed' %}BETA CHECK FAILED{% else %}HUMAN REVIEW REQUIRED{% endif %}</strong>
+        <span>The live job record has not been changed.</span>
     </div>
 </section>
 
@@ -52,29 +41,23 @@
         <p class="eyebrow">REQUEST & TRANSPORT</p>
         <h2>WHAT WAS CHECKED</h2>
         <dl class="detail-list">
-            <div><dt>TRIGGER</dt><dd>{{ run.get_trigger_display }}</dd></div>
             <div><dt>VERIFIER</dt><dd>{{ run.verifier_version|default:"Not recorded" }}</dd></div>
-            <div><dt>REQUESTED URL</dt><dd>{% if run.requested_url %}<a href="{{ run.requested_url }}" target="_blank" rel="noopener noreferrer">{{ run.requested_url }}</a>{% else %}No URL saved{% endif %}</dd></div>
-            <div><dt>FINAL URL</dt><dd>{% if run.final_url %}<a href="{{ run.final_url }}" target="_blank" rel="noopener noreferrer">{{ run.final_url }}</a>{% else %}Not available{% endif %}</dd></div>
+            <div><dt>REQUESTED URL</dt><dd>{{ run.requested_url|default:"Not available" }}</dd></div>
+            <div><dt>FINAL URL</dt><dd>{{ run.final_url|default:"Not available" }}</dd></div>
             <div><dt>HTTP STATUS</dt><dd>{{ run.http_status_code|default:"Not available" }}</dd></div>
             <div><dt>CONTENT TYPE</dt><dd>{{ run.structured_evidence.content_type|default:"Not available" }}</dd></div>
-            <div><dt>BYTES STORED</dt><dd>{{ run.structured_evidence.bytes_read|default:"0" }}</dd></div>
-            <div><dt>REDIRECTS</dt><dd>{{ run.structured_evidence.redirect_count|default:"0" }}</dd></div>
             <div><dt>DURATION</dt><dd>{% if run.duration_seconds is not None %}{{ run.duration_seconds|floatformat:3 }} seconds{% else %}Not available{% endif %}</dd></div>
         </dl>
     </article>
 
     <article class="panel interpretation-result-panel listing-state-{{ run.detected_listing_status }}">
-        <p class="eyebrow">INTERPRETATION RESULT</p>
-        <h2>{{ run.get_detected_listing_status_display|upper }}</h2>
+        <p class="eyebrow">SUGGESTED RESULT</p>
+        <h2>{% if run.status == 'failed' %}NO USABLE RESULT{% else %}{{ run.get_detected_listing_status_display|upper }}{% endif %}</h2>
         <dl class="detail-list">
             <div><dt>CONFIDENCE</dt><dd>{{ run.get_confidence_display }}</dd></div>
             <div><dt>REVIEW STATUS</dt><dd>{{ run.get_review_status_display }}</dd></div>
-            <div><dt>DETECTED ROLE</dt><dd>{{ run.detected_job_title|default:"Not confidently detected" }}</dd></div>
-            <div><dt>DETECTED COMPANY</dt><dd>{{ run.detected_company|default:"Not confidently detected" }}</dd></div>
-            <div><dt>ROLE MATCH</dt><dd>{{ run.structured_evidence.role_match_score|floatformat:2|default:"Not assessed" }}</dd></div>
-            <div><dt>COMPANY MATCH</dt><dd>{{ run.structured_evidence.company_match_score|floatformat:2|default:"Not assessed" }}</dd></div>
-            <div><dt>APPLICATION ACTION</dt><dd>{% if run.apply_action_found is True %}Found{% elif run.apply_action_found is False %}Not found{% else %}Not checked{% endif %}</dd></div>
+            <div><dt>DETECTED ROLE</dt><dd>{{ run.detected_job_title|default:"Not detected" }}</dd></div>
+            <div><dt>DETECTED COMPANY</dt><dd>{{ run.detected_company|default:"Not detected" }}</dd></div>
             <div><dt>DEADLINE STATUS</dt><dd>{{ run.get_detected_deadline_status_display }}</dd></div>
             <div><dt>DETECTED DEADLINE</dt><dd>{{ run.detected_deadline|date:"M j, Y"|default:"Not detected" }}</dd></div>
         </dl>
@@ -84,101 +67,31 @@
 <section class="panel verification-evidence-panel">
     <p class="eyebrow">AUDIT EVIDENCE</p>
     <h2>WHY THIS RESULT WAS RECORDED</h2>
-    {% if run.evidence %}<p>{{ run.evidence }}</p>{% else %}<p class="muted">No evidence was recorded.</p>{% endif %}
-
+    {% if run.evidence %}<p>{{ run.evidence }}</p>{% else %}<p class="muted">No usable automated evidence was recorded.</p>{% endif %}
     {% if run.error_message %}
         <div class="verification-error-block">
             <strong>ERROR</strong>
             <span>{{ run.error_message }}</span>
         </div>
     {% endif %}
-
-    {% if run.structured_evidence.interpretation_performed %}
-        <div class="interpretation-evidence-grid">
-            <article>
-                <span>CLASSIFICATION REASONS</span>
-                {% if run.structured_evidence.classification_reasons %}
-                    <ul>{% for reason in run.structured_evidence.classification_reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
-                {% else %}
-                    <strong>No decisive status signal</strong>
-                {% endif %}
-            </article>
-            <article>
-                <span>CLOSED / EXPIRED SIGNALS</span>
-                {% if run.structured_evidence.closed_signals or run.structured_evidence.expired_signals %}
-                    <ul>
-                        {% for signal in run.structured_evidence.closed_signals %}<li>{{ signal }}</li>{% endfor %}
-                        {% for signal in run.structured_evidence.expired_signals %}<li>{{ signal }}</li>{% endfor %}
-                    </ul>
-                {% else %}
-                    <strong>None detected</strong>
-                {% endif %}
-            </article>
-            <article>
-                <span>WRONG-PAGE SIGNALS</span>
-                {% if run.structured_evidence.wrong_page_signals %}
-                    <ul>{% for signal in run.structured_evidence.wrong_page_signals %}<li>{{ signal }}</li>{% endfor %}</ul>
-                {% else %}
-                    <strong>None detected</strong>
-                {% endif %}
-            </article>
-            <article>
-                <span>APPLICATION EVIDENCE</span>
-                {% if run.structured_evidence.apply_actions %}
-                    <ul>{% for action in run.structured_evidence.apply_actions %}<li>{{ action.source }} · {{ action.text|default:"Application action" }}</li>{% endfor %}</ul>
-                {% else %}
-                    <strong>No application action detected</strong>
-                {% endif %}
-            </article>
-            <article>
-                <span>DEADLINE EVIDENCE</span>
-                {% if run.structured_evidence.deadline_evidence %}
-                    <ul>{% for signal in run.structured_evidence.deadline_evidence %}<li>{{ signal }}</li>{% endfor %}</ul>
-                {% else %}
-                    <strong>No explicit deadline evidence</strong>
-                {% endif %}
-            </article>
-            <article>
-                <span>STRUCTURED JOB DATA</span>
-                <strong>{{ run.structured_evidence.json_ld_job_count|default:"0" }} JobPosting record{{ run.structured_evidence.json_ld_job_count|pluralize }}</strong>
-            </article>
-        </div>
-    {% endif %}
-
-    {% if run.structured_evidence %}
+    {% if run.structured_evidence.review_decision %}
         <div class="verification-structured-grid">
-            <div><span>FINAL HOST</span><strong>{{ run.structured_evidence.final_host|default:"Not available" }}</strong></div>
-            <div><span>BODY STORED</span><strong>{% if run.structured_evidence.body_stored %}Yes{% else %}No{% endif %}</strong></div>
-            <div><span>BODY HASH</span><strong>{{ run.structured_evidence.body_sha256|default:"Not available"|truncatechars:20 }}</strong></div>
-            <div><span>NEXT CAPABILITY</span><strong>{{ run.structured_evidence.next_required_capability|default:"Manual review" }}</strong></div>
+            <div><span>HUMAN DECISION</span><strong>{{ run.structured_evidence.review_decision.decision }}</strong></div>
+            <div><span>JOB RECORD CHANGED</span><strong>{% if run.structured_evidence.review_decision.job_record_changed %}Yes{% else %}No{% endif %}</strong></div>
         </div>
-    {% endif %}
-
-    {% if run.structured_evidence.page_text %}
-        <details class="verification-page-preview">
-            <summary>VIEW SAVED PAGE-TEXT PREVIEW</summary>
-            <pre>{{ run.structured_evidence.page_text|truncatechars:3000 }}</pre>
-        </details>
     {% endif %}
 </section>
 
 <section class="panel verification-run-next-step">
     <div>
         <p class="eyebrow">NEXT ACTION</p>
-        {% if run.status == 'failed' %}
-            <h2>REVIEW THE VERIFICATION FAILURE</h2>
-            <p>Correct the saved link or inspect the failure evidence before running verification again.</p>
-        {% elif run.structured_evidence.interpretation_performed %}
-            <h2>REVIEW THE SUGGESTED RESULT</h2>
-            <p>The interpretation is stored for review and has not changed the listing status or application deadline on the job record.</p>
-        {% else %}
-            <h2>RUN A NEW PAGE INTERPRETATION</h2>
-            <p>This older run contains retrieval evidence only. A new verification run will add the Step 4 interpretation layer.</p>
-        {% endif %}
+        <h2>REVIEW OR CORRECT THE RESULT</h2>
+        <p>The review screen works for successful, uncertain, and failed runs. You may apply corrected values or reject the automated suggestion without changing the job.</p>
     </div>
     <div class="card-actions">
-        <a class="button button-primary" href="{% url 'job_listing_verify' job.id %}">MANUAL VERIFICATION</a>
-        <a class="button button-secondary" href="{% url 'job_detail' job.id %}">VIEW JOB</a>
+        <a class="button button-primary" href="{% url 'review_verification_run' job.id run.id %}">REVIEW & APPLY</a>
+        <a class="button button-secondary" href="{% url 'job_listing_verify' job.id %}">MANUAL VERIFICATION</a>
+        <a class="text-link" href="{% url 'job_detail' job.id %}">VIEW JOB</a>
     </div>
 </section>
 {% endblock %}
