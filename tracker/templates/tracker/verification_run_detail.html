@@ -7,7 +7,7 @@
 
 <section class="page-heading verification-run-heading">
     <div>
-        <p class="eyebrow">STAGE 03 / VERIFICATION RUN</p>
+        <p class="eyebrow">STAGE 03 / EMPLOYER-PAGE INTERPRETATION</p>
         <h1>{{ job.title }}</h1>
         <p class="muted">{{ job.company }} · Optional automated evidence</p>
     </div>
@@ -25,14 +25,14 @@
         {% if run.status == 'failed' %}
             <p>This run failed, but the normal job-tracking workflow is still available. Review the role manually and apply the correct status from the review screen.</p>
         {% elif run.structured_evidence.interpretation_performed %}
-            <p>The page was retrieved and interpreted. Treat this as supporting evidence only; nothing changes until you review and apply the result.</p>
+            <p>The page was retrieved and interpreted using deterministic analysis. Human review is required before any result can change the live job record.</p>
         {% else %}
-            <p>This run contains limited evidence. Manual verification remains the reliable source of truth.</p>
+            <p>This run contains limited evidence. Manual verification remains the reliable source of truth and review is required before applying it.</p>
         {% endif %}
     </div>
     <div class="verification-scope-badge">
-        <strong>{% if run.status == 'failed' %}BETA CHECK FAILED{% else %}HUMAN REVIEW REQUIRED{% endif %}</strong>
-        <span>The live job record has not been changed.</span>
+        <strong>{% if run.status == 'failed' %}BETA CHECK FAILED{% else %}DETERMINISTIC ANALYSIS{% endif %}</strong>
+        <span>Human review is required; the live job record has not been changed.</span>
     </div>
 </section>
 
@@ -58,6 +58,8 @@
             <div><dt>REVIEW STATUS</dt><dd>{{ run.get_review_status_display }}</dd></div>
             <div><dt>DETECTED ROLE</dt><dd>{{ run.detected_job_title|default:"Not detected" }}</dd></div>
             <div><dt>DETECTED COMPANY</dt><dd>{{ run.detected_company|default:"Not detected" }}</dd></div>
+            <div><dt>ROLE MATCH</dt><dd>{{ run.structured_evidence.role_match_score|floatformat:2|default:"Not assessed" }}</dd></div>
+            <div><dt>APPLICATION ACTION</dt><dd>{% if run.apply_action_found is True %}Found{% elif run.apply_action_found is False %}Not found{% else %}Not checked{% endif %}</dd></div>
             <div><dt>DEADLINE STATUS</dt><dd>{{ run.get_detected_deadline_status_display }}</dd></div>
             <div><dt>DETECTED DEADLINE</dt><dd>{{ run.detected_deadline|date:"M j, Y"|default:"Not detected" }}</dd></div>
         </dl>
