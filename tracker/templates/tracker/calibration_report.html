@@ -20,12 +20,12 @@
     <div>
         <p class="eyebrow">UNSEEN HOLDOUT PROGRESS</p>
         <h2>{{ validation_reviewed }} / {{ validation_total }} BLIND REVIEWS COMPLETE</h2>
-        <p>{% if validation_complete %}The holdout batch is complete. Filter this report to Unseen validation holdout before deciding whether the matcher is ready to freeze.{% else %}Keep the matcher rules unchanged until all holdout judgments are saved. Scores remain hidden on unreviewed validation jobs.{% endif %}</p>
+        <p>{% if validation_complete %}The holdout batch is complete. Compare the two preserved weight models against the same saved judgments before making future scoring changes.{% else %}Keep the matcher rules unchanged until all holdout judgments are saved. Scores remain hidden on unreviewed validation jobs.{% endif %}</p>
     </div>
     {% if not validation_complete %}
         <a class="button button-primary" href="{% url 'job_list' %}?source=validation&review=unreviewed&sort=company">CONTINUE BLIND REVIEW</a>
     {% else %}
-        <a class="button button-primary" href="{% url 'calibration_report' %}?scope=validation">VIEW HOLDOUT RESULTS</a>
+        <a class="button button-primary" href="{% url 'weight_model_comparison' %}">COMPARE WEIGHT MODELS</a>
     {% endif %}
 </section>
 
