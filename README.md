@@ -1,6 +1,6 @@
 # Amiri's Job Finder
 
-A learning-first Django application for collecting, reviewing, and prioritizing job opportunities. Stage 1 established the reliable tracking foundation. Stage 2 now combines structured career evidence, structured job requirements, vocabulary normalization, transparent job-match analysis, dashboard ranking, human calibration, software-aware MedTech strategy, controlled semantic similarity, and blind holdout validation.
+A learning-first Django application for collecting, verifying, reviewing, and prioritizing job opportunities. Stage 1 established the tracking foundation. Stage 2 now combines structured career evidence, structured job requirements, listing reliability, transparent job-match analysis, human calibration, controlled semantic similarity, blind validation, and weight-model comparison.
 
 ## Current features
 
@@ -8,55 +8,66 @@ A learning-first Django application for collecting, reviewing, and prioritizing 
 
 - Create, view, edit, and delete job records
 - Track application status from discovery through offer or rejection
-- Store job source, employment type, work arrangement, salary text, dates, description, and personal notes
+- Store job source, employment type, work arrangement, salary, dates, description, and notes
 - Record next actions and deadlines
-- Search jobs and filter by application status
-- Responsive user interface
-- Django Admin registration for development and data recovery
+- Search, filter, and sort the application pipeline
+- Responsive interface and Django Admin support
 - Automated model and view tests
 
-### Stage 2 — Career, requirements, matching, and validation
+### Stage 2 — Verification, matching, and validation
 
-- Maintain one editable personal career profile
-- Store education, skills, target roles, target industries, preferences, priorities, and deal-breakers
+- Maintain one editable career profile
+- Store education, skills, target roles, industries, preferences, priorities, and deal-breakers
 - Maintain one structured requirement set for each job
 - Separate required skills from preferred skills
-- Record role family, seniority, industry, education, experience range, responsibilities, certifications, authorization restrictions, and hard blockers
-- Preserve the original job description alongside the reviewed structured interpretation
-- Normalize abbreviations, aliases, related skills, and role families through a version-controlled vocabulary
-- Calculate a deterministic weighted match score without an API key or LLM
+- Record role family, seniority, industry, education, experience, responsibilities, certifications, authorization restrictions, and hard blockers
+- Calculate a deterministic weighted score without an API key or LLM
 - Separate direct, rule-related, semantic, missing, and blocker evidence
-- Show evidence coverage so incomplete postings do not receive misleadingly precise scores
-- Label opportunities as priority roles, adjacent opportunities, or outside the stated priority
-- Display match results directly on the job dashboard
-- Filter by fit, opportunity lane, human-review status, and dataset source
-- Record a human judgment and save a snapshot of the matcher result for calibration
-- Apply an industry-first strategy based on the first human calibration cycle
-- Recognize medical-device software, embedded software, firmware, controls, test automation, software quality, integration, and reliability as supported technical pathways
-- Compare saved matcher snapshots with current results through a dedicated calibration report
-- Use a controlled local semantic layer to recognize selected technical paraphrases without weakening hard requirements
-- Load a separate ten-job unseen validation batch without pre-filling judgments
-- Hide holdout scores, classifications, lanes, and evidence until an independent judgment is saved
-- Isolate holdout metrics from the original calibration data in the calibration report
+- Recognize MedTech product development, quality, product safety, validation, manufacturing, systems, embedded software, firmware, controls, test automation, and other technical entry paths
+- Record five human fit judgments: **Strong**, **Good**, **Possible**, **Weak**, and **Not eligible**
+- Preserve matcher snapshots for calibration
+- Compare the current matcher with saved judgments
+- Run a blind ten-job holdout validation workflow
+- Keep Model A live while retaining Model B for measured comparison
+- Verify whether each listing is open, closed, expired, broken, on the wrong page, or still unverified
+- Record when a listing was last checked
+- Distinguish confirmed deadlines, rolling deadlines, deadlines not stated, and deadlines still unknown
+- Highlight stale listings, link problems, expired roles, and deadlines within seven days
+
+## Listing reliability workflow
+
+A match score is not actionable unless the role can still be applied to. Each job now has two separate states:
+
+1. **Application status** — saved, preparing, applied, interviewing, and so on.
+2. **Listing status** — unverified, open, closed, expired, broken link, or wrong company page.
+
+Open listings should be rechecked at least every seven days. The dashboard flags listings that have never been checked, have become stale, have an unknown deadline, or point to an unreliable page.
+
+Use the verification page for a job to confirm:
+
+- the URL opens the exact employer role page
+- applications are still accepted
+- the deadline is confirmed, rolling, not stated, or unknown
+- any verification notes that explain the result
+
+A confirmed past deadline makes an otherwise open listing effectively expired.
 
 ## Transparent matching strategy
 
 The active matcher uses four reviewable layers:
 
-1. **Exact evidence:** direct matches for degrees, tools, standards, role titles, and explicit requirements.
-2. **Normalized concepts:** aliases and abbreviations map to shared concepts, such as `V&V`, `verification and validation`, and `testing and validation`.
-3. **Rule-based relationships:** documented links connect related work such as test engineering, validation engineering, systems engineering, quality engineering, embedded software, firmware, and software testing.
-4. **Controlled semantic evidence:** local technical tokens, bigrams, and version-controlled engineering concept families identify selected paraphrases that the explicit vocabulary misses.
+1. **Exact evidence:** direct matches for degrees, tools, standards, titles, and explicit requirements.
+2. **Normalized concepts:** aliases and abbreviations map to shared concepts.
+3. **Rule-based relationships:** documented links connect related technical functions.
+4. **Controlled semantic evidence:** local technical tokens and version-controlled concept families identify selected paraphrases.
 
-Each result shows a weighted score, classification, evidence coverage, category points, direct evidence, rule-related evidence, controlled semantic evidence, gaps, and eligibility blockers.
+Each result shows a score, fit classification, evidence coverage, category points, direct evidence, related evidence, controlled semantic evidence, gaps, and eligibility blockers.
 
 The matcher is deterministic and explainable. It does not use an LLM, external API, downloaded language model, or hidden prompt.
 
-## Industry-first and software-aware strategy
+## Active and experimental weight models
 
-Medical-device product development remains the preferred destination, but entering the medical-device industry through a technically relevant function can create a credible path to an internal pivot.
-
-Matcher version `2.3-controlled-semantic` uses these category weights:
+**Model A remains the live matcher:**
 
 | Category | Weight |
 |---|---:|
@@ -69,64 +80,38 @@ Matcher version `2.3-controlled-semantic` uses these category weights:
 | Location and work arrangement | 5 |
 | Employment type | 5 |
 
-Technical MedTech functions such as quality, product safety, validation, verification, test, systems, manufacturing, process, reliability, regulatory, design assurance, clinical engineering, applications engineering, medical-device software, embedded software, firmware, controls, test automation, software quality, and integration can receive transferable-function credit when the posting is also inside a target or closely related industry.
+**Model B is retained for comparison:** required skills increase to 25 and industry decreases to 15. It can be evaluated at `/calibration/weights/`, but the report does not automatically change the live matcher.
 
-Commercial roles do not receive technical-function credit merely because the employer operates in medical devices. General software roles outside healthcare remain valid skill-based opportunities, but they do not automatically outrank strong medical-device roles in strategic priority.
+## Five-level human calibration
+
+The human judgment scale now mirrors the matcher:
+
+- **Strong match:** clearly qualified with minimal meaningful gaps
+- **Good match:** qualified and worth applying, with minor gaps or a less direct pathway
+- **Possible match:** credible but uncertain or dependent on how requirements are interpreted
+- **Weak match:** substantial gaps make an application low priority
+- **Not eligible:** a confirmed blocker prevents a valid application
+
+Older Strong judgments are preserved. They can be updated to Good where the original interface forced both matcher classifications into one human option.
 
 ## Controlled semantic similarity
 
-The semantic layer only revisits selected role, skill, education, and industry gaps. It uses local token, bigram, and engineering-family vectors.
+The semantic layer only revisits selected role, skill, education, and industry gaps. Semantic evidence is capped at `0.65` and cannot satisfy experience, work authorization, certifications, security clearances, licenses, or hard disqualifiers.
 
-Semantic evidence is deliberately limited:
+## Calibration and validation
 
-- Maximum strength is `0.65`
-- It is always labeled separately from direct and rule-related evidence
-- It cannot satisfy experience requirements
-- It cannot override work-authorization conflicts
-- It cannot satisfy certifications, security clearances, licenses, or hard disqualifiers
-- It cannot independently turn a role into a direct priority match
+Open `/calibration/` to compare saved human reviews with the current matcher. The report supports separate views for the original calibration batch, the unseen validation holdout, and manually entered jobs.
 
-## Calibration workflow
-
-A calibration stores the score, classification, and opportunity lane that existed when the human judgment was saved. This preserves the baseline after matcher changes. Live scores use the newest strategy, while the saved snapshot remains available for comparison.
-
-Open `/calibration/` to compare human reviews with the current matcher. The report supports separate views for:
-
-- the original tuning batch
-- the unseen validation holdout
-- manually entered and other jobs
-
-## Original calibration batch
-
-The repository includes ten calibration postings researched on **2026-07-16**.
+The repository includes two ten-job datasets:
 
 ```bash
 python manage.py load_stage2_calibration_batch --dry-run
 python manage.py load_stage2_calibration_batch
-```
-
-See [`docs/stage2-calibration-batch-01.md`](docs/stage2-calibration-batch-01.md).
-
-## Unseen validation batch
-
-The repository also includes ten holdout opportunities researched on **2026-07-17**. These jobs were not used to design the weights, role pathways, vocabulary, or semantic concept families.
-
-```bash
 python manage.py load_stage2_validation_batch --dry-run
 python manage.py load_stage2_validation_batch
 ```
 
-Use this dashboard view:
-
-```text
-SOURCE: Validation holdout
-CALIBRATION: Not yet reviewed
-SORT: Company A–Z
-```
-
-Unreviewed holdout jobs do not render the calculated score, classification, opportunity lane, evidence counts, or detailed matcher evidence. Saving the independent judgment records the hidden matcher snapshot and then reveals the comparison.
-
-Do not change matcher rules until all ten holdout jobs are reviewed. See [`docs/stage2-validation-batch-01.md`](docs/stage2-validation-batch-01.md).
+The holdout workflow hides the score, classification, lane, and evidence until an independent judgment is saved.
 
 ## Local setup
 
@@ -150,22 +135,21 @@ python manage.py test
 
 ## Data model direction
 
-The `JobPosting`, `JobRequirement`, `CareerProfile`, and `JobCalibration` models create the shared foundation for later AI workflows:
+The `JobPosting`, `JobRequirement`, `CareerProfile`, and `JobCalibration` models create the foundation for later AI workflows:
 
-1. Maintain accurate career preferences and background information.
-2. Save jobs through the web interface.
-3. Convert postings into structured, reviewable requirements.
+1. Verify that a posting is current and actionable.
+2. Maintain accurate career preferences and evidence.
+3. Convert postings into structured requirements.
 4. Compare each job against the career profile.
 5. Record independent judgments and matcher snapshots.
-6. Validate the matcher on data that was not used for tuning.
-7. Let future AI agents use the same validated models and scoring tools.
+6. Validate changes on data that was not used for tuning.
+7. Let future AI agents use the same verified records and scoring tools.
 8. Review resume and LinkedIn evidence before adding it to the candidate profile.
 
 ## Roadmap
 
-- **Stage 2 next:** complete the unseen validation reviews, record matcher-version history in saved snapshots, and add the candidate-evidence foundation for resume and LinkedIn review
-- **Stage 3:** tool-using AI agents that read the profile, analyze saved jobs, and review resume and LinkedIn content
-- **Stage 3 discovery expansion:** distinguish priority-role matches from adjacent opportunities that fit demonstrated background but are not the stated first choice
+- **Stage 2 next:** record matcher-version history in saved snapshots, add candidate-evidence records for resume and LinkedIn review, and complete final regression testing
+- **Stage 3:** tool-using AI agents that read the profile, verify listings, analyze jobs, and review resume and LinkedIn content
 - **Stage 4:** external job discovery, semantic retrieval, deduplication, scheduled searches, and notifications
 
 The agent will not submit applications, contact employers, or change important records without explicit approval.
