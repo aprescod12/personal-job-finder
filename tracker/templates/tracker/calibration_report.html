@@ -1,0 +1,141 @@
+{% extends "tracker/base.html" %}
+
+{% block title %}Calibration Report{% endblock %}
+
+{% block content %}
+<section class="page-heading calibration-report-heading">
+    <div>
+        <p class="eyebrow">STAGE 02 / CALIBRATION REPORT</p>
+        <h1>MEASURE THE MATCHER.</h1>
+        <p class="muted">Compare your saved human judgments with the current industry-first, software-aware matcher. Saved snapshots remain unchanged so strategy improvements can be evaluated honestly.</p>
+    </div>
+    <div class="calibration-version-card">
+        <span>CURRENT MATCHER</span>
+        <strong>{{ report.matcher_version }}</strong>
+        <small>{{ report.reviewed_count }} reviewed job{{ report.reviewed_count|pluralize }}</small>
+    </div>
+</section>
+
+<section class="stats-grid calibration-report-stats" aria-label="Calibration statistics">
+    <article class="stat-card">
+        <span>FIT AGREEMENT</span>
+        <strong>{{ report.rating_agreement_percent }}%</strong>
+        <small>{{ report.rating_aligned_count }} of {{ report.rating_comparable_count }} comparable</small>
+    </article>
+    <article class="stat-card">
+        <span>LANE AGREEMENT</span>
+        <strong>{{ report.lane_agreement_percent }}%</strong>
+        <small>{{ report.lane_aligned_count }} of {{ report.lane_comparable_count }} comparable</small>
+    </article>
+    <article class="stat-card">
+        <span>IMPROVED</span>
+        <strong>{{ report.improved_count }}</strong>
+        <small>Now aligned with your rating</small>
+    </article>
+    <article class="stat-card">
+        <span>NEEDS REVIEW</span>
+        <strong>{{ report.attention_count }}</strong>
+        <small>Fit or lane still differs</small>
+    </article>
+</section>
+
+<section class="panel calibration-report-summary">
+    <div>
+        <p class="eyebrow">STRATEGY CHANGE CHECK</p>
+        <h2>{{ report.strategy_changed_count }} RESULT{{ report.strategy_changed_count|pluralize }} CHANGED</h2>
+        <p>The report compares the current score, fit classification, and opportunity lane with the snapshot saved when you entered each judgment. A changed result is not automatically better; the human agreement columns show whether the change improved the matcher.</p>
+    </div>
+    {% if report.regressed_count %}
+        <div class="calibration-warning-card">
+            <span>REGRESSION FLAG</span>
+            <strong>{{ report.regressed_count }}</strong>
+            <small>Previously aligned results now differ and should be inspected first.</small>
+        </div>
+    {% endif %}
+</section>
+
+<form method="get" class="filter-bar calibration-report-filter">
+    <div class="filter-field">
+        <label for="id_status">REPORT VIEW</label>
+        <select id="id_status" name="status">
+            {% for value, label in filter_choices %}
+                <option value="{{ value }}" {% if selected_filter == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-actions">
+        <button class="button button-secondary" type="submit">APPLY VIEW</button>
+        {% if selected_filter %}<a class="text-link" href="{% url 'calibration_report' %}">CLEAR</a>{% endif %}
+    </div>
+</form>
+
+{% if rows %}
+<section class="calibration-report-list">
+    {% for row in rows %}
+    <article class="panel calibration-report-row{% if row.needs_attention %} calibration-report-row-review{% endif %}">
+        <div class="calibration-report-job">
+            <div>
+                <p class="eyebrow">{{ row.change_status }}</p>
+                <h2><a href="{% url 'job_match' row.job.id %}">{{ row.job.title }}</a></h2>
+                <p class="company-name">{{ row.job.company }}</p>
+            </div>
+            <div class="calibration-delta{% if row.score_delta > 0 %} calibration-delta-up{% elif row.score_delta < 0 %} calibration-delta-down{% endif %}">
+                <span>SCORE CHANGE</span>
+                <strong>{{ row.score_delta_label }}</strong>
+            </div>
+        </div>
+
+        <div class="calibration-report-grid">
+            <article>
+                <span>YOUR FIT JUDGMENT</span>
+                <strong>{{ row.calibration.get_human_rating_display }}</strong>
+                <small>{{ row.calibration.notes|default:"No review note saved."|truncatechars:120 }}</small>
+            </article>
+            <article>
+                <span>SAVED MATCHER</span>
+                <strong>{{ row.saved_score_label }}</strong>
+                <small>{{ row.calibration.predicted_classification|default:"Needs evidence" }}</small>
+            </article>
+            <article>
+                <span>CURRENT MATCHER</span>
+                <strong>{{ row.current_score_label }}</strong>
+                <small>{{ row.current_result.classification }}</small>
+            </article>
+            <article class="calibration-status-cell calibration-status-{{ row.rating_status|lower|slugify }}">
+                <span>FIT AGREEMENT</span>
+                <strong>{{ row.rating_status }}</strong>
+                <small>Current: {{ row.current_rating_label }}</small>
+            </article>
+        </div>
+
+        <div class="calibration-lane-comparison">
+            <div>
+                <span>YOUR LANE</span>
+                <strong>{{ row.calibration.get_opportunity_type_display }}</strong>
+            </div>
+            <span class="calibration-lane-arrow">→</span>
+            <div>
+                <span>CURRENT MATCHER LANE</span>
+                <strong>{{ row.current_opportunity_label }}</strong>
+            </div>
+            <div class="calibration-lane-status">
+                <span>LANE AGREEMENT</span>
+                <strong>{{ row.lane_status }}</strong>
+            </div>
+        </div>
+
+        <div class="card-actions">
+            <a class="text-link" href="{% url 'job_match' row.job.id %}">OPEN MATCH ANALYSIS</a>
+            <a class="text-link" href="{% url 'job_detail' row.job.id %}">VIEW JOB</a>
+        </div>
+    </article>
+    {% endfor %}
+</section>
+{% else %}
+<section class="empty-state calibration-report-empty">
+    <h2>{% if report.reviewed_count %}NO RESULTS IN THIS VIEW{% else %}NO CALIBRATIONS YET{% endif %}</h2>
+    <p>{% if report.reviewed_count %}Choose a different report filter to inspect your saved judgments.{% else %}Open a job's match analysis and save your independent fit and opportunity-lane judgment. The report will then compare that snapshot with the current matcher.{% endif %}</p>
+    <a class="button button-primary" href="{% url 'job_list' %}?review=unreviewed&sort=match_high">{% if report.reviewed_count %}BACK TO DASHBOARD{% else %}REVIEW JOBS{% endif %}</a>
+</section>
+{% endif %}
+{% endblock %}
