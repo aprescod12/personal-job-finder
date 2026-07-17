@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{% static 'tracker/requirements.css' %}">
     <link rel="stylesheet" href="{% static 'tracker/match.css' %}">
     <link rel="stylesheet" href="{% static 'tracker/calibration.css' %}">
+    <link rel="stylesheet" href="{% static 'tracker/calibration_report.css' %}">
 </head>
 <body>
     <header class="site-header">
@@ -22,6 +23,7 @@
                 </span>
             </a>
             <nav class="nav-actions" aria-label="Primary navigation">
+                <a class="nav-link" href="{% url 'calibration_report' %}">CALIBRATION REPORT</a>
                 <a class="nav-link" href="{% url 'career_profile' %}">CAREER PROFILE</a>
                 <a class="button button-primary" href="{% url 'job_create' %}">+ ADD JOB</a>
             </nav>
