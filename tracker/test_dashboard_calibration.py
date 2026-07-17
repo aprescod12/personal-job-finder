@@ -12,11 +12,11 @@ class CalibrationModelTests(TestCase):
         )
         calibration = JobCalibration(
             job=job,
-            human_rating=JobCalibration.HumanRating.STRONG,
+            human_rating=JobCalibration.HumanRating.GOOD,
             predicted_classification="GOOD MATCH",
         )
 
-        self.assertEqual(calibration.predicted_human_rating, "strong")
+        self.assertEqual(calibration.predicted_human_rating, "good")
         self.assertEqual(calibration.agreement_status, "ALIGNED")
         self.assertIn("agrees", calibration.agreement_label)
 
@@ -81,10 +81,11 @@ class MatchDashboardAndCalibrationTests(TestCase):
         response = self.client.get(reverse("job_list"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "RANK THE FIT. CALIBRATE THE SEARCH.")
+        self.assertContains(response, "VERIFY THE LISTING. THEN RANK THE FIT.")
         self.assertContains(response, "Alpha Medical")
         self.assertContains(response, "MATCH ANALYSIS")
         self.assertContains(response, "PRIORITY ROLE")
+        self.assertContains(response, "VERIFICATION REQUIRED")
 
     def test_strong_fit_filter_excludes_weak_job(self):
         response = self.client.get(reverse("job_list"), {"fit": "strong"})
