@@ -1,0 +1,113 @@
+{% extends "tracker/base.html" %}
+
+{% block title %}Weight Model Comparison{% endblock %}
+
+{% block content %}
+<p><a class="text-link" href="{% url 'calibration_report' %}?scope=validation">← BACK TO HOLDOUT REPORT</a></p>
+
+<section class="page-heading weight-comparison-heading">
+    <div>
+        <p class="eyebrow">STAGE 02 / HOLDOUT MODEL SELECTION</p>
+        <h1>COMPARE THE WEIGHTS.</h1>
+        <p class="muted">Both models are evaluated against the same saved unseen-validation judgments. This page is read-only and does not change the live matcher.</p>
+    </div>
+    <div class="weight-recommendation weight-recommendation-{{ comparison.recommended_model_key|default:'pending' }}">
+        <span>MEASURED RECOMMENDATION</span>
+        <strong>{{ comparison.recommendation }}</strong>
+        <small>{{ comparison.recommendation_detail }}</small>
+    </div>
+</section>
+
+<section class="panel weight-validation-status">
+    <div>
+        <p class="eyebrow">HOLDOUT COMPLETION</p>
+        <h2>{{ comparison.reviewed_count }} / {{ comparison.expected_count }} JUDGMENTS AVAILABLE</h2>
+        <p>{% if comparison.validation_complete %}The comparison is based on the completed holdout. The original judgments are not modified.{% else %}Complete the remaining blind reviews before using this report to change the live matcher.{% endif %}</p>
+    </div>
+    <div class="weight-outcome-counts">
+        <div><span>MODEL B CLOSER</span><strong>{{ comparison.model_b_wins }}</strong></div>
+        <div><span>MODEL A CLOSER</span><strong>{{ comparison.model_a_wins }}</strong></div>
+        <div><span>TIES</span><strong>{{ comparison.ties }}</strong></div>
+        <div><span>FIT LABELS CHANGED</span><strong>{{ comparison.changed_classification_count }}</strong></div>
+    </div>
+</section>
+
+<section class="weight-model-grid">
+    {% for model in models %}
+    <article class="panel weight-model-card{% if comparison.recommended_model_key == model.model_key %} weight-model-recommended{% endif %}">
+        <div class="weight-model-heading">
+            <div>
+                <p class="eyebrow">{{ model.model_key|upper }}</p>
+                <h2>{{ model.model_label }}</h2>
+            </div>
+            {% if comparison.recommended_model_key == model.model_key %}<span class="validation-badge">RECOMMENDED</span>{% endif %}
+        </div>
+
+        <div class="weight-table">
+            <div><span>REQUIRED SKILLS</span><strong>{{ model.weights.required_skills }}</strong></div>
+            <div><span>INDUSTRY</span><strong>{{ model.weights.industry }}</strong></div>
+            <div><span>ROLE FUNCTION</span><strong>{{ model.weights.role }}</strong></div>
+            <div><span>EDUCATION</span><strong>{{ model.weights.education }}</strong></div>
+            <div><span>EXPERIENCE</span><strong>{{ model.weights.experience }}</strong></div>
+            <div><span>OTHER CATEGORIES</span><strong>15</strong></div>
+        </div>
+
+        <div class="weight-metric-grid">
+            <div><span>FIT AGREEMENT</span><strong>{{ model.agreement_percent }}%</strong><small>{{ model.agreement_count }} of {{ model.comparable_count }}</small></div>
+            <div><span>MEAN RATING ERROR</span><strong>{{ model.mean_rating_distance }}</strong><small>Lower is better</small></div>
+            <div><span>FALSE STRONG</span><strong>{{ model.false_strong_count }}</strong><small>Overrated opportunities</small></div>
+            <div><span>FALSE WEAK</span><strong>{{ model.false_weak_count }}</strong><small>Underrated viable roles</small></div>
+            <div><span>FALSE DISQUALIFIED</span><strong>{{ model.false_disqualification_count }}</strong><small>Eligibility mistakes</small></div>
+            <div><span>LANE AGREEMENT</span><strong>{{ model.lane_agreement_percent }}%</strong><small>Weights do not normally alter lanes</small></div>
+        </div>
+    </article>
+    {% endfor %}
+</section>
+
+{% if comparison.rows %}
+<section class="panel weight-job-table-panel">
+    <div class="weight-section-heading">
+        <div>
+            <p class="eyebrow">JOB-BY-JOB EFFECT</p>
+            <h2>WHERE THE MODELS DIFFER</h2>
+        </div>
+    </div>
+    <div class="weight-job-table-wrap">
+        <table class="weight-job-table">
+            <thead>
+                <tr>
+                    <th>JOB</th>
+                    <th>YOUR JUDGMENT</th>
+                    <th>MODEL A</th>
+                    <th>MODEL B</th>
+                    <th>SCORE CHANGE</th>
+                    <th>CLOSER MODEL</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in comparison.rows %}
+                <tr{% if row.classification_changed %} class="weight-row-changed"{% endif %}>
+                    <td><a href="{% url 'job_match' row.job.id %}">{{ row.job.title }}</a><small>{{ row.job.company }}</small></td>
+                    <td><strong>{{ row.calibration.get_human_rating_display }}</strong><small>{{ row.calibration.get_opportunity_type_display }}</small></td>
+                    <td><strong>{{ row.model_a.score }}/100</strong><small>{{ row.model_a.classification }}</small></td>
+                    <td><strong>{{ row.model_b.score }}/100</strong><small>{{ row.model_b.classification }}</small></td>
+                    <td><strong>{{ row.score_delta_label }}</strong><small>{% if row.classification_changed %}FIT LABEL CHANGED{% else %}SAME FIT LABEL{% endif %}</small></td>
+                    <td><strong>{{ row.outcome }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% else %}
+<section class="empty-state">
+    <h2>NO HOLDOUT JUDGMENTS FOUND</h2>
+    <p>Load and complete the unseen validation batch before comparing the two weight models.</p>
+</section>
+{% endif %}
+
+<section class="panel match-method-note">
+    <h2>HOW THE RECOMMENDATION IS CHOSEN</h2>
+    <p>The comparison prioritizes exact fit-rating agreement, then fewer false strong matches, fewer false disqualifications, fewer false weak matches, and lower average rating distance. Opportunity-lane logic is held constant because this experiment changes only required-skills and industry weights.</p>
+</section>
+{% endblock %}
