@@ -34,6 +34,7 @@ A learning-first Django application for collecting, reviewing, and prioritizing 
 - Record a human judgment and save a snapshot of the matcher result for calibration
 - Flag where the matcher agrees with the human judgment and where it needs review
 - Load an idempotent ten-posting calibration batch without pre-filling human judgments
+- Apply an industry-first career strategy based on the first human calibration cycle
 
 ## Transparent matching strategy
 
@@ -53,7 +54,28 @@ Each result shows:
 - Missing evidence
 - Confirmed conflicts and items that still require manual verification
 
-The current matcher is deterministic and explainable. It does not use embeddings, an LLM, or an external API. Semantic similarity and AI-assisted extraction are later additions; they will improve recall without replacing the visible scoring rules.
+The matcher is deterministic and explainable. It does not use embeddings, an LLM, or an external API. Semantic similarity and AI-assisted extraction are later additions; they will improve recall without replacing the visible scoring rules.
+
+## Industry-first calibration strategy
+
+The first calibration cycle showed that exact role-family alignment was too strict for Amiri's actual search strategy. Medical-device product development remains the preferred destination, but entering the medical-device industry through a technically relevant function can create a credible path to an internal pivot.
+
+Matcher version `2.1-industry-first` therefore uses these weights:
+
+| Category | Weight |
+|---|---:|
+| Target industry | 20 |
+| Required skills | 20 |
+| Education | 15 |
+| Experience | 15 |
+| Exact or transferable role function | 10 |
+| Preferred skills | 10 |
+| Location and work arrangement | 5 |
+| Employment type | 5 |
+
+Technical MedTech functions such as quality, product safety, validation, verification, test, systems, manufacturing, process, reliability, regulatory, design assurance, and clinical or applications engineering can receive transferable-function credit when the posting is also inside a target or closely related industry.
+
+Commercial roles do not receive that technical-function credit merely because the employer operates in medical devices. Exact roles outside the target industry are also prevented from being labeled priority opportunities when the industry evidence conflicts with the stated strategy.
 
 ## Calibration workflow
 
@@ -63,9 +85,9 @@ The program should not assume its first scoring weights are correct. For each re
 2. Mark the role as a priority opportunity, adjacent opportunity, outside the current priority, or unsure.
 3. Save a brief note explaining your judgment.
 4. Compare the saved human judgment with the matcher's score and classification.
-5. Use a set of roughly 10–20 reviewed jobs before changing scoring weights or vocabulary relationships.
+5. Use a meaningful set of reviewed jobs before changing scoring weights or vocabulary relationships again.
 
-A calibration stores the score, classification, and opportunity lane that existed when the human judgment was saved. This preserves a usable record even after the matcher changes later.
+A calibration stores the score, classification, and opportunity lane that existed when the human judgment was saved. This preserves the original baseline after matcher changes. Live dashboard and match-page scores use the newest strategy, while the saved calibration snapshot remains available for comparison. Saving the judgment again updates that snapshot to the current matcher version.
 
 ## First real-posting calibration batch
 
@@ -121,7 +143,7 @@ The `JobPosting`, `JobRequirement`, `CareerProfile`, and `JobCalibration` models
 
 ## Roadmap
 
-- **Stage 2 next:** complete the first ten human reviews, measure where the matcher disagrees, refine weights and vocabulary from that evidence, and then add semantic similarity
+- **Stage 2 next:** compare the revised industry-first results with the saved human judgments, refine any remaining role or skill relationships, and then add semantic similarity
 - **Stage 3:** tool-using AI agents that read the profile, analyze saved jobs, and review resume and LinkedIn content
 - **Stage 3 discovery expansion:** distinguish priority-role matches from adjacent opportunities that fit demonstrated background but are not the stated first choice
 - **Stage 4:** external job discovery, semantic retrieval, deduplication, scheduled searches, and notifications
