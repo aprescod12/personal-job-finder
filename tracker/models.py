@@ -1,8 +1,13 @@
+from datetime import timedelta
+
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 
 class JobPosting(models.Model):
+    VERIFICATION_MAX_AGE_DAYS = 7
+
     class Status(models.TextChoices):
         DISCOVERED = "discovered", "Discovered"
         SAVED = "saved", "Saved"
@@ -27,6 +32,20 @@ class JobPosting(models.Model):
         HYBRID = "hybrid", "Hybrid"
         REMOTE = "remote", "Remote"
         UNKNOWN = "unknown", "Unknown"
+
+    class ListingStatus(models.TextChoices):
+        UNVERIFIED = "unverified", "Unverified"
+        OPEN = "open", "Open"
+        CLOSED = "closed", "Closed by employer"
+        EXPIRED = "expired", "Expired"
+        LINK_BROKEN = "link_broken", "Broken link"
+        WRONG_PAGE = "wrong_page", "Wrong company page"
+
+    class DeadlineStatus(models.TextChoices):
+        UNKNOWN = "unknown", "Unknown"
+        CONFIRMED = "confirmed", "Confirmed date"
+        ROLLING = "rolling", "Rolling / open until filled"
+        NOT_STATED = "not_stated", "No deadline stated"
 
     title = models.CharField(max_length=200)
     company = models.CharField(max_length=200)
@@ -53,6 +72,18 @@ class JobPosting(models.Model):
     salary_text = models.CharField(max_length=200, blank=True)
     date_posted = models.DateField(null=True, blank=True)
     application_deadline = models.DateField(null=True, blank=True)
+    deadline_status = models.CharField(
+        max_length=20,
+        choices=DeadlineStatus.choices,
+        default=DeadlineStatus.UNKNOWN,
+    )
+    listing_status = models.CharField(
+        max_length=20,
+        choices=ListingStatus.choices,
+        default=ListingStatus.UNVERIFIED,
+    )
+    listing_last_verified = models.DateField(null=True, blank=True)
+    listing_verification_notes = models.TextField(blank=True)
     next_action = models.CharField(max_length=300, blank=True)
     next_action_date = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True)
@@ -62,6 +93,120 @@ class JobPosting(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+    def clean(self):
+        super().clean()
+        if (
+            self.deadline_status == self.DeadlineStatus.CONFIRMED
+            and not self.application_deadline
+        ):
+            raise ValidationError(
+                {
+                    "application_deadline": (
+                        "Enter the confirmed application deadline."
+                    )
+                }
+            )
+        if (
+            self.date_posted
+            and self.application_deadline
+            and self.application_deadline < self.date_posted
+        ):
+            raise ValidationError(
+                {
+                    "application_deadline": (
+                        "Application deadline cannot be earlier than the posting date."
+                    )
+                }
+            )
+
+    @property
+    def deadline_days_remaining(self):
+        if (
+            self.deadline_status != self.DeadlineStatus.CONFIRMED
+            or not self.application_deadline
+        ):
+            return None
+        return (self.application_deadline - timezone.localdate()).days
+
+    @property
+    def deadline_is_overdue(self):
+        days = self.deadline_days_remaining
+        return days is not None and days < 0
+
+    @property
+    def deadline_is_due_soon(self):
+        days = self.deadline_days_remaining
+        return days is not None and 0 <= days <= 7
+
+    @property
+    def deadline_label(self):
+        if (
+            self.deadline_status == self.DeadlineStatus.CONFIRMED
+            and self.application_deadline
+        ):
+            days = self.deadline_days_remaining
+            if days is not None and days < 0:
+                return f"Expired {abs(days)} day{'s' if abs(days) != 1 else ''} ago"
+            if days == 0:
+                return "Deadline today"
+            if days == 1:
+                return "Deadline tomorrow"
+            return f"Deadline in {days} days"
+        return self.get_deadline_status_display()
+
+    @property
+    def effective_listing_status(self):
+        if (
+            self.deadline_is_overdue
+            and self.listing_status
+            in {self.ListingStatus.OPEN, self.ListingStatus.UNVERIFIED}
+        ):
+            return self.ListingStatus.EXPIRED
+        return self.listing_status
+
+    @property
+    def effective_listing_status_label(self):
+        return dict(self.ListingStatus.choices).get(
+            self.effective_listing_status,
+            "Unverified",
+        )
+
+    @property
+    def listing_is_available(self):
+        return self.effective_listing_status == self.ListingStatus.OPEN
+
+    @property
+    def listing_has_link_problem(self):
+        return self.effective_listing_status in {
+            self.ListingStatus.LINK_BROKEN,
+            self.ListingStatus.WRONG_PAGE,
+        }
+
+    @property
+    def listing_is_unavailable(self):
+        return self.effective_listing_status in {
+            self.ListingStatus.CLOSED,
+            self.ListingStatus.EXPIRED,
+            self.ListingStatus.LINK_BROKEN,
+            self.ListingStatus.WRONG_PAGE,
+        }
+
+    @property
+    def listing_needs_verification(self):
+        status = self.effective_listing_status
+        if status == self.ListingStatus.UNVERIFIED:
+            return True
+        if status != self.ListingStatus.OPEN:
+            return False
+        if self.deadline_status == self.DeadlineStatus.UNKNOWN:
+            return True
+        if not self.listing_last_verified:
+            return True
+        oldest_acceptable = timezone.localdate() - timedelta(
+            days=self.VERIFICATION_MAX_AGE_DAYS
+        )
+        return self.listing_last_verified < oldest_acceptable
 
     def __str__(self):
         return f"{self.title} at {self.company}"
@@ -187,6 +332,7 @@ class JobRequirement(models.Model):
 class JobCalibration(models.Model):
     class HumanRating(models.TextChoices):
         STRONG = "strong", "Strong match"
+        GOOD = "good", "Good match"
         POSSIBLE = "possible", "Possible match"
         WEAK = "weak", "Weak match"
         NOT_ELIGIBLE = "not_eligible", "Not eligible"
@@ -199,7 +345,7 @@ class JobCalibration(models.Model):
 
     PREDICTED_RATING_MAP = {
         "STRONG MATCH": HumanRating.STRONG,
-        "GOOD MATCH": HumanRating.STRONG,
+        "GOOD MATCH": HumanRating.GOOD,
         "POSSIBLE MATCH": HumanRating.POSSIBLE,
         "WEAK MATCH": HumanRating.WEAK,
         "DISQUALIFIED": HumanRating.NOT_ELIGIBLE,
