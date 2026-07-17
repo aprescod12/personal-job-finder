@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 
 from .models import CareerProfile, JobCalibration, JobPosting, JobRequirement
 
@@ -17,7 +18,36 @@ def normalize_line_list(value):
     return "\n".join(items)
 
 
-class JobPostingForm(forms.ModelForm):
+class DeadlineValidationMixin:
+    def clean(self):
+        cleaned_data = super().clean()
+        deadline = cleaned_data.get("application_deadline")
+        deadline_status = cleaned_data.get("deadline_status")
+
+        if deadline and deadline_status != JobPosting.DeadlineStatus.CONFIRMED:
+            cleaned_data["deadline_status"] = JobPosting.DeadlineStatus.CONFIRMED
+
+        if (
+            cleaned_data.get("deadline_status")
+            == JobPosting.DeadlineStatus.CONFIRMED
+            and not deadline
+        ):
+            self.add_error(
+                "application_deadline",
+                "Enter the confirmed application deadline.",
+            )
+
+        date_posted = cleaned_data.get("date_posted")
+        if date_posted and deadline and deadline < date_posted:
+            self.add_error(
+                "application_deadline",
+                "Application deadline cannot be earlier than the posting date.",
+            )
+
+        return cleaned_data
+
+
+class JobPostingForm(DeadlineValidationMixin, forms.ModelForm):
     class Meta:
         model = JobPosting
         fields = [
@@ -30,6 +60,7 @@ class JobPostingForm(forms.ModelForm):
             "work_arrangement",
             "salary_text",
             "date_posted",
+            "deadline_status",
             "application_deadline",
             "status",
             "next_action",
@@ -37,6 +68,19 @@ class JobPostingForm(forms.ModelForm):
             "description",
             "notes",
         ]
+        labels = {
+            "job_url": "Direct company job URL",
+            "deadline_status": "Application deadline status",
+            "application_deadline": "Confirmed application deadline",
+        }
+        help_texts = {
+            "job_url": (
+                "Use the direct role page whenever possible, not a company careers homepage."
+            ),
+            "deadline_status": (
+                "Record whether the deadline is confirmed, rolling, not stated, or still unknown."
+            ),
+        }
         widgets = {
             "date_posted": forms.DateInput(attrs={"type": "date"}),
             "application_deadline": forms.DateInput(attrs={"type": "date"}),
@@ -44,6 +88,67 @@ class JobPostingForm(forms.ModelForm):
             "description": forms.Textarea(attrs={"rows": 10}),
             "notes": forms.Textarea(attrs={"rows": 5}),
         }
+
+
+class JobListingVerificationForm(DeadlineValidationMixin, forms.ModelForm):
+    class Meta:
+        model = JobPosting
+        fields = [
+            "job_url",
+            "listing_status",
+            "deadline_status",
+            "application_deadline",
+            "listing_verification_notes",
+        ]
+        labels = {
+            "job_url": "Direct company job URL",
+            "listing_status": "Current listing status",
+            "deadline_status": "Deadline status",
+            "application_deadline": "Confirmed deadline",
+            "listing_verification_notes": "Verification notes",
+        }
+        help_texts = {
+            "job_url": (
+                "Confirm that this URL opens the exact role on the employer's website."
+            ),
+            "listing_status": (
+                "Mark wrong pages and broken links explicitly instead of treating them as open jobs."
+            ),
+            "listing_verification_notes": (
+                "Record what you checked, such as 'Role open on company site' or 'Redirects to careers homepage'."
+            ),
+        }
+        widgets = {
+            "application_deadline": forms.DateInput(attrs={"type": "date"}),
+            "listing_verification_notes": forms.Textarea(
+                attrs={
+                    "rows": 5,
+                    "placeholder": (
+                        "Verified on the employer website. Direct role page is open and "
+                        "the deadline is confirmed."
+                    ),
+                }
+            ),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if (
+            cleaned_data.get("listing_status") == JobPosting.ListingStatus.OPEN
+            and not cleaned_data.get("job_url")
+        ):
+            self.add_error(
+                "job_url",
+                "An open listing needs a direct company job URL.",
+            )
+        return cleaned_data
+
+    def save(self, commit=True):
+        job = super().save(commit=False)
+        job.listing_last_verified = timezone.localdate()
+        if commit:
+            job.save()
+        return job
 
 
 class JobRequirementForm(forms.ModelForm):
@@ -168,7 +273,8 @@ class JobCalibrationForm(forms.ModelForm):
         }
         help_texts = {
             "human_rating": (
-                "Rate the opportunity independently before relying on the matcher."
+                "Strong = clearly qualified with minimal gaps. Good = qualified and worth applying, "
+                "but with minor gaps or a less direct path. Possible = credible but uncertain."
             ),
             "opportunity_type": (
                 "Choose whether this belongs in your priority search or an adjacent lane."
@@ -182,8 +288,8 @@ class JobCalibrationForm(forms.ModelForm):
                 attrs={
                     "rows": 5,
                     "placeholder": (
-                        "Example: Strong technical fit, but the role is less focused on "
-                        "medical-device development than my primary target."
+                        "Example: Good technical fit with a few missing preferred skills; "
+                        "the medical-device industry makes it worth applying."
                     ),
                 }
             )
