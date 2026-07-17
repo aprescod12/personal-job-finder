@@ -14,8 +14,9 @@
         <p class="muted">Correct every missing or inaccurate field before creating the job and calculating a match score.</p>
     </div>
     <div class="intake-boundary-card">
-        <span>PARSER</span>
-        <strong>{{ extraction.parser_version|upper }}</strong>
+        <span>EXTRACTOR</span>
+        <strong>{{ extraction.provider.label|default:"Job extraction provider"|upper }}</strong>
+        <small>{{ extraction.provider.version|default:extraction.parser_version|upper }} · {{ extraction.provider.mode|default:"deterministic"|upper }}</small>
         <small>No job has been created yet.</small>
     </div>
 </section>
@@ -29,7 +30,7 @@
         </article>
         <article>
             <span>WARNINGS</span>
-            {% if extraction.warnings %}<ul>{% for item in extraction.warnings %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<strong>No parser warnings.</strong>{% endif %}
+            {% if extraction.warnings %}<ul>{% for item in extraction.warnings %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<strong>No extractor warnings.</strong>{% endif %}
         </article>
     </div>
 </section>
