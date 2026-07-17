@@ -1,0 +1,70 @@
+{% extends "tracker/base.html" %}
+
+{% block title %}Review Verification · {{ job.title }}{% endblock %}
+
+{% block content %}
+<p><a class="text-link" href="{% url 'verification_run_detail' job.id run.id %}">← BACK TO RUN</a></p>
+
+<section class="page-heading verification-run-heading">
+    <div>
+        <p class="eyebrow">STAGE 03 / HUMAN REVIEW</p>
+        <h1>REVIEW BEFORE APPLYING.</h1>
+        <p class="muted">Use the automated result as evidence when it is useful. Correct it—or ignore it entirely—before updating the live job record.</p>
+    </div>
+    <div class="verification-run-status verification-run-status-{{ run.status }}">
+        <span>AUTO-CHECK RESULT</span>
+        <strong>{{ run.get_status_display }}</strong>
+        <small>{{ run.get_review_status_display }}</small>
+    </div>
+</section>
+
+<section class="verification-run-grid">
+    <article class="panel">
+        <p class="eyebrow">CURRENT JOB RECORD</p>
+        <h2>{{ job.effective_listing_status_label|upper }}</h2>
+        <dl class="detail-list">
+            <div><dt>URL</dt><dd>{{ job.job_url|default:"Not recorded" }}</dd></div>
+            <div><dt>LISTING STATUS</dt><dd>{{ job.get_listing_status_display }}</dd></div>
+            <div><dt>DEADLINE STATUS</dt><dd>{{ job.get_deadline_status_display }}</dd></div>
+            <div><dt>DEADLINE</dt><dd>{{ job.application_deadline|date:"M j, Y"|default:"Not recorded" }}</dd></div>
+            <div><dt>LAST VERIFIED</dt><dd>{{ job.listing_last_verified|date:"M j, Y"|default:"Never" }}</dd></div>
+        </dl>
+    </article>
+
+    <article class="panel interpretation-result-panel listing-state-{{ run.detected_listing_status }}">
+        <p class="eyebrow">AUTOMATED SUGGESTION</p>
+        <h2>{% if run.status == 'failed' %}NO USABLE RESULT{% else %}{{ run.get_detected_listing_status_display|upper }}{% endif %}</h2>
+        <dl class="detail-list">
+            <div><dt>CONFIDENCE</dt><dd>{{ run.get_confidence_display }}</dd></div>
+            <div><dt>FINAL URL</dt><dd>{{ run.final_url|default:"Not available" }}</dd></div>
+            <div><dt>DEADLINE STATUS</dt><dd>{{ run.get_detected_deadline_status_display }}</dd></div>
+            <div><dt>DEADLINE</dt><dd>{{ run.detected_deadline|date:"M j, Y"|default:"Not detected" }}</dd></div>
+            <div><dt>EVIDENCE</dt><dd>{{ run.evidence|default:run.error_message|default:"No usable evidence" }}</dd></div>
+        </dl>
+    </article>
+</section>
+
+<section class="panel form-panel listing-verification-form-panel">
+    <p class="eyebrow">YOUR REVIEWED DECISION</p>
+    <h2>APPLY A CONFIRMED RESULT</h2>
+    <p>Open the employer page yourself when necessary. The values below are the only values that will be written to the job record.</p>
+
+    <form method="post" class="stacked-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="field-error">{{ form.non_field_errors }}</div>{% endif %}
+        {% for field in form %}
+            <div class="form-field">
+                <label for="{{ field.id_for_label }}">{{ field.label|upper }}</label>
+                {{ field }}
+                {% if field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
+                {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+        {% endfor %}
+        <div class="form-actions">
+            <button class="button button-primary" type="submit" name="decision" value="apply">APPLY REVIEWED RESULT</button>
+            <button class="button button-danger" type="submit" name="decision" value="reject" formnovalidate>REJECT AUTO-CHECK</button>
+            <a class="text-link" href="{% url 'job_detail' job.id %}">CANCEL</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
