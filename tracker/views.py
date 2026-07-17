@@ -11,7 +11,7 @@ from .forms import (
     JobRequirementForm,
 )
 from .models import CareerProfile, JobCalibration, JobPosting, JobRequirement
-from .services.matching import analyze_job_match
+from .services.strategy_matching import analyze_job_match
 
 
 FIT_FILTER_CHOICES = (
