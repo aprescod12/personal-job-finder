@@ -1,0 +1,29 @@
+.verification-page-preview {
+    margin-top: 1.25rem;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.verification-page-preview summary {
+    cursor: pointer;
+    padding: 0.9rem 1rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.verification-page-preview pre {
+    max-height: 24rem;
+    margin: 0;
+    padding: 1rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    border-top: 1px solid var(--border-color);
+    font: inherit;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.verification-run-grid .detail-list dd a {
+    overflow-wrap: anywhere;
+}

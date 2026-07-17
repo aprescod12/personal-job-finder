@@ -29,12 +29,12 @@ def run_job_verification(request, job_id):
     if run.status == ListingVerificationRun.RunStatus.FAILED:
         messages.error(
             request,
-            "Verification could not start. Review the saved URL and run details.",
+            "Employer-page retrieval failed. Review the saved URL and run evidence.",
         )
     elif run.status == ListingVerificationRun.RunStatus.NEEDS_REVIEW:
         messages.warning(
             request,
-            "Verification preflight completed. Employer-page inspection is still required.",
+            "Employer-page retrieval completed. Page interpretation is still required.",
         )
     else:
         messages.success(request, "Verification completed and the result was saved.")

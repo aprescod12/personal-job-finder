@@ -9,6 +9,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from tracker.models import JobPosting, ListingVerificationRun
+from tracker.services.page_retrieval import ControlledHttpRetriever
 
 
 class VerificationAlreadyRunning(RuntimeError):
@@ -46,13 +47,7 @@ class ListingVerifier(Protocol):
 
 
 class UrlReadinessVerifier:
-    """Stage 3 Step 2 preflight.
-
-    This verifier intentionally performs no network request. It confirms that the
-    stored URL is structurally usable and records the exact evidence that the next
-    verifier will need. Employer-page retrieval and content interpretation belong
-    to later Stage 3 steps.
-    """
+    """Stage 3 Step 2 URL-only preflight retained for isolated testing."""
 
     version = "3.2-url-readiness-v1"
 
@@ -71,21 +66,92 @@ class UrlReadinessVerifier:
 
         return VerificationObservation(
             status=ListingVerificationRun.RunStatus.NEEDS_REVIEW,
-            final_url="",
             confidence=ListingVerificationRun.Confidence.LOW,
             review_status=ListingVerificationRun.ReviewStatus.PENDING,
             evidence=(
-                "The stored URL is structurally valid. Stage 3 Step 2 did not make "
-                "a network request, follow redirects, or inspect the employer page. "
-                "The listing still requires page-level verification."
+                "The stored URL is structurally valid. This URL-only preflight did not "
+                "make a network request or inspect the employer page."
             ),
             structured_evidence={
                 "network_request_performed": False,
-                "url_scheme": parsed.scheme,
                 "url_host": parsed.hostname,
                 "expected_job_title": job.title,
                 "expected_company": job.company,
                 "next_required_capability": "employer_page_retrieval",
+            },
+        )
+
+
+class EmployerPageRetrievalVerifier:
+    """Stage 3 Step 3 transport verifier.
+
+    It retrieves a bounded public employer page and records transport evidence.
+    It intentionally does not infer whether the role is open, closed, expired, or
+    still accepting applications; those decisions belong to the interpretation
+    step that follows.
+    """
+
+    version = "3.3-controlled-http-retrieval-v1"
+
+    def __init__(self, *, retriever: ControlledHttpRetriever | None = None):
+        self.retriever = retriever or ControlledHttpRetriever()
+
+    def verify(self, job: JobPosting) -> VerificationObservation:
+        raw_url = (job.job_url or "").strip()
+        if not raw_url:
+            raise VerificationInputError(
+                "Add a direct employer job URL before running verification."
+            )
+
+        page = self.retriever.retrieve(raw_url)
+        successful_response = 200 <= page.status_code < 400
+        usable_text = page.body_stored and bool(page.body_text.strip())
+        confidence = (
+            ListingVerificationRun.Confidence.MEDIUM
+            if successful_response and usable_text
+            else ListingVerificationRun.Confidence.LOW
+        )
+
+        redirect_count = len(page.redirect_chain)
+        response_summary = f"HTTP {page.status_code}"
+        if page.content_type:
+            response_summary += f" {page.content_type}"
+
+        return VerificationObservation(
+            status=ListingVerificationRun.RunStatus.NEEDS_REVIEW,
+            final_url=page.final_url,
+            http_status_code=page.status_code,
+            confidence=confidence,
+            review_status=ListingVerificationRun.ReviewStatus.PENDING,
+            evidence=(
+                f"The employer page was retrieved under controlled limits and returned "
+                f"{response_summary} after {redirect_count} redirect"
+                f"{'s' if redirect_count != 1 else ''}. Retrieval evidence was saved, "
+                "but this step did not decide whether the role is open or closed."
+            ),
+            structured_evidence={
+                "network_request_performed": True,
+                "retrieval_only": True,
+                "requested_url": page.requested_url,
+                "final_url": page.final_url,
+                "final_host": urlparse(page.final_url).hostname or "",
+                "http_status_code": page.status_code,
+                "content_type": page.content_type,
+                "charset": page.charset,
+                "content_encoding": page.content_encoding,
+                "content_length_header": page.content_length_header,
+                "bytes_read": page.bytes_read,
+                "body_sha256": page.body_sha256,
+                "body_stored": page.body_stored,
+                "page_text": page.body_text,
+                "redirect_count": redirect_count,
+                "redirect_chain": page.redirect_chain,
+                "response_headers": page.response_headers,
+                "expected_job_title": job.title,
+                "expected_company": job.company,
+                "max_response_bytes": self.retriever.policy.max_response_bytes,
+                "timeout_seconds": self.retriever.policy.timeout_seconds,
+                "next_required_capability": "employer_page_interpretation",
             },
         )
 
@@ -162,7 +228,12 @@ def _fail_run(run: ListingVerificationRun, exc: Exception) -> ListingVerificatio
     run.confidence = ListingVerificationRun.Confidence.UNKNOWN
     run.review_status = ListingVerificationRun.ReviewStatus.PENDING
     run.error_message = str(exc)[:2000]
-    run.evidence = "The verification attempt did not produce a usable result."
+    run.evidence = "The controlled employer-page retrieval did not produce a usable result."
+    run.structured_evidence = {
+        "verification_failed": True,
+        "failure_type": exc.__class__.__name__,
+        "next_required_action": "review_saved_url_or_retrieval_error",
+    }
     run.completed_at = timezone.now()
     run.save(
         update_fields=[
@@ -171,6 +242,7 @@ def _fail_run(run: ListingVerificationRun, exc: Exception) -> ListingVerificatio
             "review_status",
             "error_message",
             "evidence",
+            "structured_evidence",
             "completed_at",
         ]
     )
@@ -189,7 +261,7 @@ def run_listing_verification(
     updates the current ``JobPosting`` listing status or deadline.
     """
 
-    selected_verifier = verifier or UrlReadinessVerifier()
+    selected_verifier = verifier or EmployerPageRetrievalVerifier()
     run = _start_run(
         job,
         trigger=trigger,
