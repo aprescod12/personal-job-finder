@@ -29,12 +29,82 @@
     {% endif %}
 </section>
 
+<section class="panel calibration-panel">
+    <div class="calibration-heading">
+        <div>
+            <p class="eyebrow">HUMAN-IN-THE-LOOP CALIBRATION</p>
+            <h2>RECORD YOUR OWN JUDGMENT</h2>
+            <p>Judge this opportunity independently. Your review is saved with a snapshot of the current score so later weight and vocabulary changes can be evaluated against real examples.</p>
+        </div>
+        {% if calibration %}
+            <div class="calibration-status{% if calibration.agreement_status == 'ALIGNED' %} calibration-status-aligned{% elif calibration.agreement_status == 'REVIEW' %} calibration-status-review{% else %} calibration-status-evidence{% endif %}">
+                <span>CALIBRATION STATUS</span>
+                <strong>{{ calibration.agreement_status }}</strong>
+                <small>{{ calibration.agreement_label }}</small>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if calibration %}
+        <div class="calibration-comparison-grid">
+            <article>
+                <span>YOUR FIT JUDGMENT</span>
+                <strong>{{ calibration.get_human_rating_display }}</strong>
+            </article>
+            <article>
+                <span>YOUR OPPORTUNITY LANE</span>
+                <strong>{{ calibration.get_opportunity_type_display }}</strong>
+            </article>
+            <article>
+                <span>SAVED MATCHER RESULT</span>
+                <strong>{% if calibration.predicted_classification %}{{ calibration.predicted_score }}/100{% else %}NOT SCORED{% endif %}</strong>
+                <small>{{ calibration.predicted_classification|default:"Needs requirements" }}</small>
+            </article>
+            <article>
+                <span>SAVED MATCHER LANE</span>
+                <strong>{{ calibration.predicted_track|default:"Not classified" }}</strong>
+            </article>
+        </div>
+    {% endif %}
+
+    <form method="post" class="calibration-form">
+        {% csrf_token %}
+        {% if calibration_form.non_field_errors %}
+            <div class="field-error">{{ calibration_form.non_field_errors }}</div>
+        {% endif %}
+        <div class="calibration-form-grid">
+            <div class="form-field">
+                <label for="{{ calibration_form.human_rating.id_for_label }}">{{ calibration_form.human_rating.label|upper }}</label>
+                {{ calibration_form.human_rating }}
+                <p class="help-text">{{ calibration_form.human_rating.help_text }}</p>
+                {% for error in calibration_form.human_rating.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field">
+                <label for="{{ calibration_form.opportunity_type.id_for_label }}">{{ calibration_form.opportunity_type.label|upper }}</label>
+                {{ calibration_form.opportunity_type }}
+                <p class="help-text">{{ calibration_form.opportunity_type.help_text }}</p>
+                {% for error in calibration_form.opportunity_type.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+            <div class="form-field calibration-notes-field">
+                <label for="{{ calibration_form.notes.id_for_label }}">{{ calibration_form.notes.label|upper }}</label>
+                {{ calibration_form.notes }}
+                <p class="help-text">{{ calibration_form.notes.help_text }}</p>
+                {% for error in calibration_form.notes.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+        </div>
+        <div class="form-actions calibration-actions">
+            <button class="button button-primary" type="submit">{% if calibration %}UPDATE MY JUDGMENT{% else %}SAVE MY JUDGMENT{% endif %}</button>
+            <a class="text-link" href="{% url 'job_list' %}?review=unreviewed&sort=match_high">REVIEW NEXT UNCALIBRATED JOB</a>
+        </div>
+    </form>
+</section>
+
 {% if not match_result.has_requirements %}
 <section class="panel match-empty-state">
     <p class="match-empty-code">MATCH / 00</p>
     <div>
         <h2>STRUCTURED REQUIREMENTS ARE NEEDED</h2>
-        <p>Add the role family, skills, education, experience, industry, and blockers before generating a trustworthy score.</p>
+        <p>Add the role family, skills, education, experience, industry, and blockers before generating a trustworthy score. Your human judgment can still be recorded above.</p>
         <a class="button button-accent" href="{% url 'job_requirements' job.id %}">ADD JOB REQUIREMENTS</a>
     </div>
 </section>

@@ -1,12 +1,25 @@
 from django.contrib import admin
 
-from .models import CareerProfile, JobPosting, JobRequirement
+from .models import CareerProfile, JobCalibration, JobPosting, JobRequirement
 
 
 class JobRequirementInline(admin.StackedInline):
     model = JobRequirement
     extra = 1
     max_num = 1
+
+
+class JobCalibrationInline(admin.StackedInline):
+    model = JobCalibration
+    extra = 1
+    max_num = 1
+    readonly_fields = (
+        "predicted_score",
+        "predicted_classification",
+        "predicted_track",
+        "created_at",
+        "updated_at",
+    )
 
 
 @admin.register(JobPosting)
@@ -24,7 +37,7 @@ class JobPostingAdmin(admin.ModelAdmin):
     list_filter = ("status", "employment_type", "work_arrangement")
     search_fields = ("title", "company", "location", "description", "notes")
     date_hierarchy = "created_at"
-    inlines = (JobRequirementInline,)
+    inlines = (JobRequirementInline, JobCalibrationInline)
 
 
 @admin.register(JobRequirement)
@@ -46,6 +59,28 @@ class JobRequirementAdmin(admin.ModelAdmin):
         "preferred_skills",
     )
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(JobCalibration)
+class JobCalibrationAdmin(admin.ModelAdmin):
+    list_display = (
+        "job",
+        "human_rating",
+        "opportunity_type",
+        "predicted_score",
+        "predicted_classification",
+        "agreement_status",
+        "updated_at",
+    )
+    list_filter = ("human_rating", "opportunity_type", "predicted_classification")
+    search_fields = ("job__title", "job__company", "notes")
+    readonly_fields = (
+        "predicted_score",
+        "predicted_classification",
+        "predicted_track",
+        "created_at",
+        "updated_at",
+    )
 
 
 @admin.register(CareerProfile)

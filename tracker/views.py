@@ -1,41 +1,237 @@
+from datetime import date
+
 from django.contrib import messages
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import CareerProfileForm, JobPostingForm, JobRequirementForm
-from .models import CareerProfile, JobPosting, JobRequirement
+from .forms import (
+    CareerProfileForm,
+    JobCalibrationForm,
+    JobPostingForm,
+    JobRequirementForm,
+)
+from .models import CareerProfile, JobCalibration, JobPosting, JobRequirement
 from .services.matching import analyze_job_match
+
+
+FIT_FILTER_CHOICES = (
+    ("", "All fit levels"),
+    ("strong", "Strong / good matches"),
+    ("possible", "Possible matches"),
+    ("weak", "Weak matches"),
+    ("disqualified", "Disqualified"),
+    ("needs_review", "Needs more evidence"),
+)
+
+TRACK_FILTER_CHOICES = (
+    ("", "All opportunity lanes"),
+    ("priority", "Priority roles"),
+    ("adjacent", "Adjacent opportunities"),
+    ("outside", "Outside current priority"),
+)
+
+REVIEW_FILTER_CHOICES = (
+    ("", "All review states"),
+    ("reviewed", "Human-reviewed"),
+    ("unreviewed", "Not yet reviewed"),
+    ("aligned", "Matcher aligned"),
+    ("disagree", "Matcher differs"),
+)
+
+SORT_CHOICES = (
+    ("newest", "Newest added"),
+    ("match_high", "Highest match score"),
+    ("match_low", "Lowest match score"),
+    ("deadline", "Nearest deadline"),
+    ("company", "Company A–Z"),
+)
+
+FIT_CLASSIFICATIONS = {
+    "strong": {"STRONG MATCH", "GOOD MATCH"},
+    "possible": {"POSSIBLE MATCH"},
+    "weak": {"WEAK MATCH"},
+    "disqualified": {"DISQUALIFIED"},
+    "needs_review": {"LOW CONFIDENCE", "NEEDS REQUIREMENTS"},
+}
+
+TRACK_VALUES = {
+    "priority": "PRIORITY ROLE",
+    "adjacent": "ADJACENT OPPORTUNITY",
+    "outside": "OUTSIDE PRIORITY",
+}
+
+
+def _attach_match_data(jobs, profile):
+    job_ids = [job.id for job in jobs]
+    requirements = {
+        item.job_id: item
+        for item in JobRequirement.objects.filter(job_id__in=job_ids)
+    }
+    calibrations = {
+        item.job_id: item
+        for item in JobCalibration.objects.filter(job_id__in=job_ids)
+    }
+
+    for job in jobs:
+        requirement = requirements.get(job.id)
+        job.match_result = analyze_job_match(profile, job, requirement)
+        job.calibration_record = calibrations.get(job.id)
+
+    return jobs
+
+
+def _filter_by_fit(jobs, selected_fit):
+    classifications = FIT_CLASSIFICATIONS.get(selected_fit)
+    if not classifications:
+        return jobs
+    return [
+        job
+        for job in jobs
+        if job.match_result.classification in classifications
+    ]
+
+
+def _filter_by_track(jobs, selected_track):
+    track = TRACK_VALUES.get(selected_track)
+    if not track:
+        return jobs
+    return [job for job in jobs if job.match_result.track == track]
+
+
+def _filter_by_review(jobs, selected_review):
+    if selected_review == "reviewed":
+        return [job for job in jobs if job.calibration_record]
+    if selected_review == "unreviewed":
+        return [job for job in jobs if not job.calibration_record]
+    if selected_review == "aligned":
+        return [
+            job
+            for job in jobs
+            if job.calibration_record
+            and job.calibration_record.agreement_status == "ALIGNED"
+        ]
+    if selected_review == "disagree":
+        return [
+            job
+            for job in jobs
+            if job.calibration_record
+            and job.calibration_record.agreement_status == "REVIEW"
+        ]
+    return jobs
+
+
+def _sort_jobs(jobs, selected_sort):
+    if selected_sort == "match_high":
+        return sorted(
+            jobs,
+            key=lambda job: (
+                not job.match_result.is_disqualified,
+                job.match_result.has_requirements,
+                job.match_result.score,
+                job.match_result.evidence_coverage,
+                job.created_at,
+            ),
+            reverse=True,
+        )
+    if selected_sort == "match_low":
+        return sorted(
+            jobs,
+            key=lambda job: (
+                not job.match_result.has_requirements,
+                job.match_result.score,
+                job.company.casefold(),
+            ),
+        )
+    if selected_sort == "deadline":
+        return sorted(
+            jobs,
+            key=lambda job: (
+                job.application_deadline is None,
+                job.application_deadline or date.max,
+                job.company.casefold(),
+            ),
+        )
+    if selected_sort == "company":
+        return sorted(
+            jobs,
+            key=lambda job: (job.company.casefold(), job.title.casefold()),
+        )
+    return jobs
 
 
 def job_list(request):
     all_jobs = JobPosting.objects.all()
-    jobs = all_jobs
+    filtered_jobs = all_jobs
 
     query = request.GET.get("q", "").strip()
     selected_status = request.GET.get("status", "").strip()
+    selected_fit = request.GET.get("fit", "").strip()
+    selected_track = request.GET.get("track", "").strip()
+    selected_review = request.GET.get("review", "").strip()
+    selected_sort = request.GET.get("sort", "newest").strip()
 
     if query:
-        jobs = jobs.filter(
+        filtered_jobs = filtered_jobs.filter(
             Q(title__icontains=query)
             | Q(company__icontains=query)
             | Q(location__icontains=query)
             | Q(description__icontains=query)
-        )
+            | Q(requirements__role_family__icontains=query)
+            | Q(requirements__industry__icontains=query)
+            | Q(requirements__required_skills__icontains=query)
+            | Q(requirements__preferred_skills__icontains=query)
+        ).distinct()
 
     if selected_status in JobPosting.Status.values:
-        jobs = jobs.filter(status=selected_status)
+        filtered_jobs = filtered_jobs.filter(status=selected_status)
+    else:
+        selected_status = ""
+
+    valid_fit_values = {value for value, _ in FIT_FILTER_CHOICES}
+    valid_track_values = {value for value, _ in TRACK_FILTER_CHOICES}
+    valid_review_values = {value for value, _ in REVIEW_FILTER_CHOICES}
+    valid_sort_values = {value for value, _ in SORT_CHOICES}
+
+    if selected_fit not in valid_fit_values:
+        selected_fit = ""
+    if selected_track not in valid_track_values:
+        selected_track = ""
+    if selected_review not in valid_review_values:
+        selected_review = ""
+    if selected_sort not in valid_sort_values:
+        selected_sort = "newest"
+
+    profile = CareerProfile.get_solo()
+    jobs = _attach_match_data(list(filtered_jobs), profile)
+    jobs = _filter_by_fit(jobs, selected_fit)
+    jobs = _filter_by_track(jobs, selected_track)
+    jobs = _filter_by_review(jobs, selected_review)
+    jobs = _sort_jobs(jobs, selected_sort)
+
+    analyzed_count = sum(job.match_result.has_requirements for job in jobs)
+    strong_count = sum(
+        job.match_result.classification in {"STRONG MATCH", "GOOD MATCH"}
+        for job in jobs
+    )
+    reviewed_count = sum(bool(job.calibration_record) for job in jobs)
 
     context = {
         "jobs": jobs,
         "query": query,
         "selected_status": selected_status,
+        "selected_fit": selected_fit,
+        "selected_track": selected_track,
+        "selected_review": selected_review,
+        "selected_sort": selected_sort,
         "status_choices": JobPosting.Status.choices,
+        "fit_filter_choices": FIT_FILTER_CHOICES,
+        "track_filter_choices": TRACK_FILTER_CHOICES,
+        "review_filter_choices": REVIEW_FILTER_CHOICES,
+        "sort_choices": SORT_CHOICES,
         "total_jobs": all_jobs.count(),
-        "saved_jobs": all_jobs.filter(status=JobPosting.Status.SAVED).count(),
-        "applied_jobs": all_jobs.filter(status=JobPosting.Status.APPLIED).count(),
-        "interview_jobs": all_jobs.filter(
-            status=JobPosting.Status.INTERVIEW
-        ).count(),
+        "analyzed_jobs": analyzed_count,
+        "strong_jobs": strong_count,
+        "reviewed_jobs": reviewed_count,
     }
     return render(request, "tracker/job_list.html", context)
 
@@ -70,6 +266,7 @@ def job_detail(request, job_id):
     requirements = JobRequirement.objects.filter(job=job).first()
     profile = CareerProfile.get_solo()
     match_result = analyze_job_match(profile, job, requirements)
+    calibration = JobCalibration.objects.filter(job=job).first()
 
     return render(
         request,
@@ -78,6 +275,7 @@ def job_detail(request, job_id):
             "job": job,
             "requirements": requirements,
             "match_result": match_result,
+            "calibration": calibration,
         },
     )
 
@@ -87,6 +285,29 @@ def job_match(request, job_id):
     requirements = JobRequirement.objects.filter(job=job).first()
     profile = CareerProfile.get_solo()
     match_result = analyze_job_match(profile, job, requirements)
+    calibration = JobCalibration.objects.filter(job=job).first()
+
+    if request.method == "POST":
+        calibration_form = JobCalibrationForm(
+            request.POST,
+            instance=calibration,
+        )
+        if calibration_form.is_valid():
+            calibration = calibration_form.save(commit=False)
+            calibration.job = job
+            calibration.predicted_score = (
+                match_result.score if match_result.has_requirements else None
+            )
+            calibration.predicted_classification = match_result.classification
+            calibration.predicted_track = match_result.track
+            calibration.save()
+            messages.success(
+                request,
+                "Your calibration judgment was saved with the current matcher result.",
+            )
+            return redirect("job_match", job_id=job.id)
+    else:
+        calibration_form = JobCalibrationForm(instance=calibration)
 
     return render(
         request,
@@ -96,6 +317,8 @@ def job_match(request, job_id):
             "requirements": requirements,
             "profile": profile,
             "match_result": match_result,
+            "calibration": calibration,
+            "calibration_form": calibration_form,
         },
     )
 

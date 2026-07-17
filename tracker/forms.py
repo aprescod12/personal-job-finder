@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import CareerProfile, JobPosting, JobRequirement
+from .models import CareerProfile, JobCalibration, JobPosting, JobRequirement
 
 
 def normalize_line_list(value):
@@ -155,6 +155,39 @@ class JobRequirementForm(forms.ModelForm):
             )
 
         return cleaned_data
+
+
+class JobCalibrationForm(forms.ModelForm):
+    class Meta:
+        model = JobCalibration
+        fields = ["human_rating", "opportunity_type", "notes"]
+        labels = {
+            "human_rating": "Your fit judgment",
+            "opportunity_type": "Opportunity lane",
+            "notes": "Calibration notes",
+        }
+        help_texts = {
+            "human_rating": (
+                "Rate the opportunity independently before relying on the matcher."
+            ),
+            "opportunity_type": (
+                "Choose whether this belongs in your priority search or an adjacent lane."
+            ),
+            "notes": (
+                "Record why you agree or disagree so future scoring changes remain grounded."
+            ),
+        }
+        widgets = {
+            "notes": forms.Textarea(
+                attrs={
+                    "rows": 5,
+                    "placeholder": (
+                        "Example: Strong technical fit, but the role is less focused on "
+                        "medical-device development than my primary target."
+                    ),
+                }
+            )
+        }
 
 
 class CareerProfileForm(forms.ModelForm):
