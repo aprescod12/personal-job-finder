@@ -1,6 +1,6 @@
 # Amiri's Job Finder
 
-A learning-first Django application for collecting, reviewing, and prioritizing job opportunities. Stage 1 established the reliable tracking foundation. Stage 2 now combines structured career evidence, structured job requirements, vocabulary normalization, transparent job-match analysis, dashboard ranking, human calibration, software-aware MedTech strategy, controlled semantic similarity, and calibration reporting.
+A learning-first Django application for collecting, reviewing, and prioritizing job opportunities. Stage 1 established the reliable tracking foundation. Stage 2 now combines structured career evidence, structured job requirements, vocabulary normalization, transparent job-match analysis, dashboard ranking, human calibration, software-aware MedTech strategy, controlled semantic similarity, and blind holdout validation.
 
 ## Current features
 
@@ -15,7 +15,7 @@ A learning-first Django application for collecting, reviewing, and prioritizing 
 - Django Admin registration for development and data recovery
 - Automated model and view tests
 
-### Stage 2 — Career, requirements, matching, and calibration
+### Stage 2 — Career, requirements, matching, and validation
 
 - Maintain one editable personal career profile
 - Store education, skills, target roles, target industries, preferences, priorities, and deal-breakers
@@ -29,41 +29,32 @@ A learning-first Django application for collecting, reviewing, and prioritizing 
 - Show evidence coverage so incomplete postings do not receive misleadingly precise scores
 - Label opportunities as priority roles, adjacent opportunities, or outside the stated priority
 - Display match results directly on the job dashboard
-- Filter by fit, opportunity lane, and human-review status
-- Sort by match score, deadline, company, or date added
+- Filter by fit, opportunity lane, human-review status, and dataset source
 - Record a human judgment and save a snapshot of the matcher result for calibration
-- Load an idempotent ten-posting calibration batch without pre-filling human judgments
 - Apply an industry-first strategy based on the first human calibration cycle
 - Recognize medical-device software, embedded software, firmware, controls, test automation, software quality, integration, and reliability as supported technical pathways
 - Compare saved matcher snapshots with current results through a dedicated calibration report
-- Measure fit agreement, lane agreement, improvements, regressions, changed scores, and unresolved disagreements
 - Use a controlled local semantic layer to recognize selected technical paraphrases without weakening hard requirements
+- Load a separate ten-job unseen validation batch without pre-filling judgments
+- Hide holdout scores, classifications, lanes, and evidence until an independent judgment is saved
+- Isolate holdout metrics from the original calibration data in the calibration report
 
 ## Transparent matching strategy
 
-The active matcher does not depend only on exact keyword overlap. It currently uses four reviewable layers:
+The active matcher uses four reviewable layers:
 
 1. **Exact evidence:** direct matches for degrees, tools, standards, role titles, and explicit requirements.
 2. **Normalized concepts:** aliases and abbreviations map to shared concepts, such as `V&V`, `verification and validation`, and `testing and validation`.
 3. **Rule-based relationships:** documented links connect related work such as test engineering, validation engineering, systems engineering, quality engineering, embedded software, firmware, and software testing.
 4. **Controlled semantic evidence:** local technical tokens, bigrams, and version-controlled engineering concept families identify selected paraphrases that the explicit vocabulary misses.
 
-Each result shows:
-
-- A weighted score and classification
-- Evidence coverage
-- Category-level points
-- Direct supporting evidence
-- Rule-based transferable evidence
-- Controlled semantic evidence with the similarity reason and capped strength
-- Missing evidence
-- Confirmed conflicts and items that still require manual verification
+Each result shows a weighted score, classification, evidence coverage, category points, direct evidence, rule-related evidence, controlled semantic evidence, gaps, and eligibility blockers.
 
 The matcher is deterministic and explainable. It does not use an LLM, external API, downloaded language model, or hidden prompt.
 
 ## Industry-first and software-aware strategy
 
-The first calibration cycle showed that exact role-family alignment was too strict for Amiri's actual search strategy. Medical-device product development remains the preferred destination, but entering the medical-device industry through a technically relevant function can create a credible path to an internal pivot.
+Medical-device product development remains the preferred destination, but entering the medical-device industry through a technically relevant function can create a credible path to an internal pivot.
 
 Matcher version `2.3-controlled-semantic` uses these category weights:
 
@@ -84,14 +75,7 @@ Commercial roles do not receive technical-function credit merely because the emp
 
 ## Controlled semantic similarity
 
-The semantic layer only revisits selected gaps in:
-
-- Role alignment
-- Required and preferred skills
-- Education
-- Industry descriptions
-
-It uses local token, bigram, and engineering-family vectors. Examples of concept families include biosignal instrumentation, verification and engineering test, embedded software and controls, software test automation, regulated product development, systems requirements, manufacturing processes, and quality reliability.
+The semantic layer only revisits selected role, skill, education, and industry gaps. It uses local token, bigram, and engineering-family vectors.
 
 Semantic evidence is deliberately limited:
 
@@ -102,54 +86,47 @@ Semantic evidence is deliberately limited:
 - It cannot satisfy certifications, security clearances, licenses, or hard disqualifiers
 - It cannot independently turn a role into a direct priority match
 
-This allows the program to recognize related meaning while preserving conservative eligibility decisions.
-
 ## Calibration workflow
 
-The program should not assume its first scoring weights are correct. For each real posting:
+A calibration stores the score, classification, and opportunity lane that existed when the human judgment was saved. This preserves the baseline after matcher changes. Live scores use the newest strategy, while the saved snapshot remains available for comparison.
 
-1. Review the job yourself and record **Strong match**, **Possible match**, **Weak match**, or **Not eligible**.
-2. Mark the role as a priority opportunity, adjacent opportunity, outside the current priority, or unsure.
-3. Save a brief note explaining your judgment.
-4. Compare the saved human judgment with the matcher's score and classification.
-5. Use a meaningful set of reviewed jobs before changing scoring weights, vocabulary relationships, or semantic families again.
+Open `/calibration/` to compare human reviews with the current matcher. The report supports separate views for:
 
-A calibration stores the score, classification, and opportunity lane that existed when the human judgment was saved. This preserves the original baseline after matcher changes. Live dashboard and match-page scores use the newest strategy, while the saved calibration snapshot remains available for comparison. Saving the judgment again updates that snapshot to the current matcher version.
+- the original tuning batch
+- the unseen validation holdout
+- manually entered and other jobs
 
-## Calibration report
+## Original calibration batch
 
-Open `/calibration/` to compare all saved human reviews with the current matcher.
-
-The report shows:
-
-- Current fit-rating agreement percentage
-- Current opportunity-lane agreement percentage
-- Jobs that now align after a strategy change
-- Previously aligned jobs that now require review
-- Score, classification, and lane changes since the saved snapshot
-- Filters for attention items, aligned results, changed results, improvements, and regressions
-
-The report is read-only. It does not replace the original human judgment or saved matcher snapshot.
-
-## First real-posting calibration batch
-
-The repository includes ten curated postings researched on **2026-07-16**. They cover direct early-career roles, internships, adjacent opportunities, work-authorization blockers, and stretch positions with experience gaps.
-
-Preview the batch without changing the database:
+The repository includes ten calibration postings researched on **2026-07-16**.
 
 ```bash
 python manage.py load_stage2_calibration_batch --dry-run
-```
-
-Load it:
-
-```bash
 python manage.py load_stage2_calibration_batch
 ```
 
-The command is idempotent and does not create human judgments. Use `--refresh` only to restore the curated fields on records originally created by this batch.
+See [`docs/stage2-calibration-batch-01.md`](docs/stage2-calibration-batch-01.md).
 
-See [`docs/stage2-calibration-batch-01.md`](docs/stage2-calibration-batch-01.md) for the role list and review procedure.
+## Unseen validation batch
+
+The repository also includes ten holdout opportunities researched on **2026-07-17**. These jobs were not used to design the weights, role pathways, vocabulary, or semantic concept families.
+
+```bash
+python manage.py load_stage2_validation_batch --dry-run
+python manage.py load_stage2_validation_batch
+```
+
+Use this dashboard view:
+
+```text
+SOURCE: Validation holdout
+CALIBRATION: Not yet reviewed
+SORT: Company A–Z
+```
+
+Unreviewed holdout jobs do not render the calculated score, classification, opportunity lane, evidence counts, or detailed matcher evidence. Saving the independent judgment records the hidden matcher snapshot and then reveals the comparison.
+
+Do not change matcher rules until all ten holdout jobs are reviewed. See [`docs/stage2-validation-batch-01.md`](docs/stage2-validation-batch-01.md).
 
 ## Local setup
 
@@ -175,18 +152,18 @@ python manage.py test
 
 The `JobPosting`, `JobRequirement`, `CareerProfile`, and `JobCalibration` models create the shared foundation for later AI workflows:
 
-1. You maintain accurate career preferences and background information.
-2. You save jobs through the web interface.
-3. You convert each posting into structured, reviewable requirements.
-4. The transparent scoring service compares each job against the career profile.
-5. You record your own judgment and compare it with the matcher.
-6. The calibration report measures whether strategy changes improved agreement.
-7. A future AI agent can use the same validated models and scoring tools.
-8. A document-review agent can analyze your resume and LinkedIn profile, extract supported skills and experiences, and identify credible adjacent career paths.
+1. Maintain accurate career preferences and background information.
+2. Save jobs through the web interface.
+3. Convert postings into structured, reviewable requirements.
+4. Compare each job against the career profile.
+5. Record independent judgments and matcher snapshots.
+6. Validate the matcher on data that was not used for tuning.
+7. Let future AI agents use the same validated models and scoring tools.
+8. Review resume and LinkedIn evidence before adding it to the candidate profile.
 
 ## Roadmap
 
-- **Stage 2 next:** test the semantic matcher on a new unseen validation batch, record matcher versions in saved calibration snapshots, and add the candidate-evidence foundation for resume and LinkedIn review
+- **Stage 2 next:** complete the unseen validation reviews, record matcher-version history in saved snapshots, and add the candidate-evidence foundation for resume and LinkedIn review
 - **Stage 3:** tool-using AI agents that read the profile, analyze saved jobs, and review resume and LinkedIn content
 - **Stage 3 discovery expansion:** distinguish priority-role matches from adjacent opportunities that fit demonstrated background but are not the stated first choice
 - **Stage 4:** external job discovery, semantic retrieval, deduplication, scheduled searches, and notifications

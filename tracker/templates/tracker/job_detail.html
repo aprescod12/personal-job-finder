@@ -5,14 +5,15 @@
 {% block content %}
 <p><a class="text-link" href="{% url 'job_list' %}">← BACK TO DASHBOARD</a></p>
 
-<section class="detail-header panel">
+<section class="detail-header panel{% if blind_validation %} blind-validation-header{% endif %}">
     <div>
         <span class="status-badge status-{{ job.status }}">{{ job.get_status_display }}</span>
+        {% if blind_validation %}<span class="validation-badge">BLIND HOLDOUT</span>{% endif %}
         <h1>{{ job.title }}</h1>
         <p class="detail-company">{{ job.company }}</p>
     </div>
     <div class="detail-actions">
-        <a class="button button-primary" href="{% url 'job_match' job.id %}">MATCH ANALYSIS</a>
+        <a class="button button-primary" href="{% url 'job_match' job.id %}">{% if blind_validation %}RECORD BLIND REVIEW{% else %}MATCH ANALYSIS{% endif %}</a>
         <a class="button button-accent" href="{% url 'job_requirements' job.id %}">JOB REQUIREMENTS</a>
         <a class="button button-secondary" href="{% url 'job_edit' job.id %}">EDIT</a>
         <a class="button button-danger" href="{% url 'job_delete' job.id %}">DELETE</a>
@@ -47,16 +48,19 @@
     </article>
 </section>
 
-<section class="panel match-summary-card">
+<section class="panel match-summary-card{% if blind_validation %} blind-match-summary{% endif %}">
     <div class="match-summary-copy">
-        <p class="eyebrow">STAGE 02 / EXPLAINABLE ANALYSIS</p>
-        <h2>JOB MATCH</h2>
-        {% if match_result.has_requirements %}
-            <p>The score uses your career profile, structured requirements, and explicit vocabulary relationships. Review the evidence before deciding whether to apply.</p>
+        <p class="eyebrow">{% if blind_validation %}STAGE 02 / HOLDOUT VALIDATION{% else %}STAGE 02 / EXPLAINABLE ANALYSIS{% endif %}</p>
+        <h2>{% if blind_validation %}MATCHER RESULT LOCKED{% else %}JOB MATCH{% endif %}</h2>
+        {% if blind_validation %}
+            <p>Review the posting and structured requirements first. The score, classification, lane, and evidence are hidden until your independent judgment is saved.</p>
+        {% elif match_result.has_requirements %}
+            <p>The score uses your career profile, structured requirements, explicit vocabulary relationships, and controlled semantic evidence. Review the evidence before deciding whether to apply.</p>
             <div class="match-summary-stats">
                 <span>{{ match_result.evidence_coverage }}% COVERAGE</span>
                 <span>{{ match_result.direct_matches|length }} DIRECT</span>
                 <span>{{ match_result.related_matches|length }} RELATED</span>
+                <span>{{ match_result.semantic_matches|length }} SEMANTIC</span>
                 <span>{{ match_result.gaps|length }} GAPS</span>
             </div>
         {% else %}
@@ -64,7 +68,16 @@
         {% endif %}
     </div>
 
-    {% if match_result.has_requirements %}
+    {% if blind_validation %}
+        <div class="match-summary-result">
+            <div class="match-summary-number"><strong>?</strong><span>HIDDEN</span></div>
+            <div class="match-summary-meta">
+                <strong>BLIND REVIEW REQUIRED</strong>
+                <span>YOUR DECISION COMES FIRST</span>
+                <a class="button button-primary" href="{% url 'job_match' job.id %}">SAVE JUDGMENT</a>
+            </div>
+        </div>
+    {% elif match_result.has_requirements %}
         <div class="match-summary-result">
             <div class="match-summary-number">
                 <strong>{{ match_result.score }}</strong>
