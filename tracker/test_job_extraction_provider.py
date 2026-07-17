@@ -80,7 +80,7 @@ class ExtractionProviderContractTests(TestCase):
         self.assertEqual(result["provider"]["version"], PARSER_VERSION)
         self.assertEqual(result["parser_version"], PARSER_VERSION)
         self.assertEqual(result["job"]["title"], "Biomedical Test Engineer")
-        self.assertIn("salary_text", result["job"])
+        self.assertIn("next_action", result["job"])
         self.assertIn("certifications", result["requirements"])
         self.assertIn("minimum_years_experience", result["requirements"])
 
