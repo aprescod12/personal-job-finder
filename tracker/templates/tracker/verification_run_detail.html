@@ -1,0 +1,94 @@
+{% extends "tracker/base.html" %}
+
+{% block title %}Verification Run · {{ job.title }}{% endblock %}
+
+{% block content %}
+<p><a class="text-link" href="{% url 'job_detail' job.id %}">← BACK TO JOB</a></p>
+
+<section class="page-heading verification-run-heading">
+    <div>
+        <p class="eyebrow">STAGE 03 / VERIFICATION RUN</p>
+        <h1>{{ job.title }}</h1>
+        <p class="muted">{{ job.company }} · Manual verification request</p>
+    </div>
+    <div class="verification-run-status verification-run-status-{{ run.status }}">
+        <span>RUN STATUS</span>
+        <strong>{{ run.get_status_display }}</strong>
+        <small>{{ run.created_at|date:"M j, Y, g:i a" }}</small>
+    </div>
+</section>
+
+<section class="panel verification-run-scope">
+    <div>
+        <p class="eyebrow">CURRENT STEP</p>
+        <h2>URL READINESS PREFLIGHT</h2>
+        <p>This run tested the verification workflow and saved an auditable result. It did not open the employer page, follow redirects, inspect page content, or decide whether applications are still open.</p>
+    </div>
+    <div class="verification-scope-badge">
+        <strong>NO NETWORK REQUEST</strong>
+        <span>Employer-page checks arrive in the next Stage 3 step.</span>
+    </div>
+</section>
+
+<section class="verification-run-grid">
+    <article class="panel">
+        <p class="eyebrow">REQUEST</p>
+        <h2>WHAT WAS CHECKED</h2>
+        <dl class="detail-list">
+            <div><dt>TRIGGER</dt><dd>{{ run.get_trigger_display }}</dd></div>
+            <div><dt>VERIFIER</dt><dd>{{ run.verifier_version|default:"Not recorded" }}</dd></div>
+            <div><dt>REQUESTED URL</dt><dd>{% if run.requested_url %}<a href="{{ run.requested_url }}" target="_blank" rel="noopener noreferrer">{{ run.requested_url }}</a>{% else %}No URL saved{% endif %}</dd></div>
+            <div><dt>STARTED</dt><dd>{{ run.started_at|date:"M j, Y, g:i:s a" }}</dd></div>
+            <div><dt>COMPLETED</dt><dd>{{ run.completed_at|date:"M j, Y, g:i:s a"|default:"Not completed" }}</dd></div>
+            <div><dt>DURATION</dt><dd>{% if run.duration_seconds is not None %}{{ run.duration_seconds|floatformat:3 }} seconds{% else %}Not available{% endif %}</dd></div>
+        </dl>
+    </article>
+
+    <article class="panel">
+        <p class="eyebrow">RESULT</p>
+        <h2>{{ run.get_status_display|upper }}</h2>
+        <dl class="detail-list">
+            <div><dt>CONFIDENCE</dt><dd>{{ run.get_confidence_display }}</dd></div>
+            <div><dt>REVIEW STATUS</dt><dd>{{ run.get_review_status_display }}</dd></div>
+            <div><dt>DETECTED LISTING STATUS</dt><dd>{{ run.get_detected_listing_status_display }}</dd></div>
+            <div><dt>DETECTED DEADLINE STATUS</dt><dd>{{ run.get_detected_deadline_status_display }}</dd></div>
+            <div><dt>APPLICATION ACTION</dt><dd>{% if run.apply_action_found is True %}Found{% elif run.apply_action_found is False %}Not found{% else %}Not checked{% endif %}</dd></div>
+            <div><dt>HTTP STATUS</dt><dd>{{ run.http_status_code|default:"Not checked" }}</dd></div>
+        </dl>
+    </article>
+</section>
+
+<section class="panel verification-evidence-panel">
+    <p class="eyebrow">AUDIT EVIDENCE</p>
+    <h2>WHY THIS RESULT WAS RECORDED</h2>
+    {% if run.evidence %}<p>{{ run.evidence }}</p>{% else %}<p class="muted">No evidence was recorded.</p>{% endif %}
+
+    {% if run.error_message %}
+        <div class="verification-error-block">
+            <strong>ERROR</strong>
+            <span>{{ run.error_message }}</span>
+        </div>
+    {% endif %}
+
+    {% if run.structured_evidence %}
+        <div class="verification-structured-grid">
+            <div><span>URL HOST</span><strong>{{ run.structured_evidence.url_host|default:"Not available" }}</strong></div>
+            <div><span>EXPECTED ROLE</span><strong>{{ run.structured_evidence.expected_job_title|default:job.title }}</strong></div>
+            <div><span>EXPECTED COMPANY</span><strong>{{ run.structured_evidence.expected_company|default:job.company }}</strong></div>
+            <div><span>NEXT CAPABILITY</span><strong>{{ run.structured_evidence.next_required_capability|default:"Manual review" }}</strong></div>
+        </div>
+    {% endif %}
+</section>
+
+<section class="panel verification-run-next-step">
+    <div>
+        <p class="eyebrow">NEXT ACTION</p>
+        <h2>{% if run.status == 'failed' %}FIX THE SAVED LINK{% else %}EMPLOYER-PAGE INSPECTION STILL REQUIRED{% endif %}</h2>
+        <p>{% if run.status == 'failed' %}Add or correct the direct employer job URL, then run the preflight again.{% else %}This result proves the runner and audit trail work. It does not yet prove that the listing is active.{% endif %}</p>
+    </div>
+    <div class="card-actions">
+        <a class="button button-primary" href="{% url 'job_listing_verify' job.id %}">MANUAL VERIFICATION</a>
+        <a class="button button-secondary" href="{% url 'job_detail' job.id %}">VIEW JOB</a>
+    </div>
+</section>
+{% endblock %}
