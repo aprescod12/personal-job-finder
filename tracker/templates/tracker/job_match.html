@@ -171,4 +171,54 @@
     <p><strong>Direct</strong> means explicit or alias-normalized evidence was found. <strong>Related</strong> means the system found a documented transferable relationship. <strong>Missing</strong> means the profile currently contains no supported evidence. The score should guide review, not replace your judgment.</p>
 </section>
 {% endif %}
+
+<section class="panel calibration-panel" id="calibration">
+    <div class="calibration-intro">
+        <div>
+            <p class="eyebrow">STAGE 02 / HUMAN CALIBRATION</p>
+            <h2>RECORD YOUR JUDGMENT</h2>
+            <p>Rate this opportunity after reviewing the posting. These judgments will show where the scoring weights or vocabulary need adjustment.</p>
+        </div>
+
+        {% if calibration %}
+            <div class="calibration-current calibration-{{ calibration_alignment|lower }}">
+                <span>YOUR CURRENT VERDICT</span>
+                <strong>{{ calibration.get_verdict_display|upper }}</strong>
+                <small>{{ calibration_alignment }} WITH PROGRAM</small>
+            </div>
+        {% else %}
+            <div class="calibration-current calibration-review">
+                <span>CALIBRATION STATUS</span>
+                <strong>NOT REVIEWED</strong>
+                <small>ADD YOUR FIRST JUDGMENT</small>
+            </div>
+        {% endif %}
+    </div>
+
+    <form method="post" class="calibration-form">
+        {% csrf_token %}
+        {% if calibration_form.non_field_errors %}
+            <div class="field-error">{{ calibration_form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="calibration-form-grid">
+            <div class="form-field">
+                <label for="{{ calibration_form.verdict.id_for_label }}">{{ calibration_form.verdict.label|upper }}</label>
+                {{ calibration_form.verdict }}
+                {% for error in calibration_form.verdict.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+
+            <div class="form-field full-span">
+                <label for="{{ calibration_form.notes.id_for_label }}">{{ calibration_form.notes.label|upper }}</label>
+                {{ calibration_form.notes }}
+                {% for error in calibration_form.notes.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+        </div>
+
+        <div class="calibration-actions">
+            <button class="button button-primary" type="submit">SAVE MY JUDGMENT</button>
+            <span class="muted small">This changes calibration evidence only. It does not alter the program's calculated score.</span>
+        </div>
+    </form>
+</section>
 {% endblock %}
