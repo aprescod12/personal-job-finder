@@ -5,6 +5,7 @@ from django.urls import reverse
 
 from .models import JobPosting, ListingVerificationRun
 from .services.listing_verification_runner import (
+    EmployerPageRetrievalVerifier,
     VerificationAlreadyRunning,
     VerificationObservation,
     run_listing_verification,
@@ -12,8 +13,34 @@ from .services.listing_verification_runner import (
 from .services.page_retrieval import RetrievedPage
 
 
-def retrieved_page(url="https://careers.example.com/jobs/123"):
-    body = "<html><title>Test Engineer</title><a>Apply</a></html>"
+def retrieved_page(
+    url="https://careers.example.com/jobs/123",
+    *,
+    title="Embedded Software Engineer",
+    company="Example Medical",
+):
+    body = f"""
+        <html>
+          <head>
+            <title>{title} | {company}</title>
+            <meta property="og:site_name" content="{company}">
+            <script type="application/ld+json">
+              {{
+                "@type": "JobPosting",
+                "title": "{title}",
+                "hiringOrganization": {{"name": "{company}"}},
+                "validThrough": "2099-12-31",
+                "directApply": true
+              }}
+            </script>
+          </head>
+          <body>
+            <h1>{title}</h1>
+            <p>{company}</p>
+            <a href="/jobs/123/apply">Apply now</a>
+          </body>
+        </html>
+    """
     return RetrievedPage(
         requested_url=url,
         final_url=url,
@@ -71,25 +98,31 @@ class ListingVerificationRunnerTests(TestCase):
         self.retrieve_mock = patcher.start()
         self.addCleanup(patcher.stop)
 
-    def test_default_retrieval_records_transport_evidence_without_status_claim(self):
+    def test_default_verification_retrieves_and_interprets_page(self):
         run = run_listing_verification(self.job)
 
         self.assertEqual(
             run.status,
             ListingVerificationRun.RunStatus.NEEDS_REVIEW,
         )
-        self.assertEqual(run.confidence, ListingVerificationRun.Confidence.MEDIUM)
+        self.assertEqual(run.confidence, ListingVerificationRun.Confidence.HIGH)
         self.assertEqual(
             run.review_status,
             ListingVerificationRun.ReviewStatus.PENDING,
         )
         self.assertTrue(run.structured_evidence["network_request_performed"])
-        self.assertTrue(run.structured_evidence["retrieval_only"])
+        self.assertTrue(run.structured_evidence["interpretation_performed"])
+        self.assertFalse(run.structured_evidence["retrieval_only"])
         self.assertEqual(run.final_url, self.job.job_url)
         self.assertEqual(run.http_status_code, 200)
-        self.assertEqual(run.detected_listing_status, JobPosting.ListingStatus.UNVERIFIED)
-        self.assertEqual(run.detected_deadline_status, JobPosting.DeadlineStatus.UNKNOWN)
-        self.assertIsNone(run.apply_action_found)
+        self.assertEqual(run.detected_listing_status, JobPosting.ListingStatus.OPEN)
+        self.assertEqual(
+            run.detected_deadline_status,
+            JobPosting.DeadlineStatus.CONFIRMED,
+        )
+        self.assertTrue(run.apply_action_found)
+        self.assertEqual(run.detected_job_title, self.job.title)
+        self.assertEqual(run.detected_company, self.job.company)
         self.assertIsNotNone(run.completed_at)
 
         self.job.refresh_from_db()
@@ -103,16 +136,31 @@ class ListingVerificationRunnerTests(TestCase):
         )
         self.assertIsNone(self.job.listing_last_verified)
 
-    def test_default_retrieval_stores_bounded_page_text_for_later_interpretation(self):
+    def test_default_verification_preserves_retrieval_and_interpretation_evidence(self):
         run = run_listing_verification(self.job)
 
-        self.assertIn("Test Engineer", run.structured_evidence["page_text"])
+        self.assertIn("Embedded Software Engineer", run.structured_evidence["page_text"])
         self.assertTrue(run.structured_evidence["body_stored"])
         self.assertEqual(run.structured_evidence["body_sha256"], "a" * 64)
+        self.assertGreaterEqual(run.structured_evidence["role_match_score"], 0.9)
+        self.assertGreaterEqual(run.structured_evidence["company_match_score"], 0.9)
         self.assertEqual(
             run.structured_evidence["next_required_capability"],
-            "employer_page_interpretation",
+            "review_and_apply_interpretation",
         )
+
+    def test_transport_only_verifier_remains_available_for_diagnostics(self):
+        run = run_listing_verification(
+            self.job,
+            verifier=EmployerPageRetrievalVerifier(),
+        )
+
+        self.assertEqual(
+            run.detected_listing_status,
+            JobPosting.ListingStatus.UNVERIFIED,
+        )
+        self.assertTrue(run.structured_evidence["retrieval_only"])
+        self.assertFalse(run.structured_evidence.get("interpretation_performed", False))
 
     def test_injected_verifier_can_complete_a_run(self):
         run = run_listing_verification(
@@ -189,7 +237,9 @@ class ListingVerificationRunnerViewTests(TestCase):
         patcher = patch(
             "tracker.services.listing_verification_runner.ControlledHttpRetriever.retrieve",
             return_value=retrieved_page(
-                "https://jobs.example.com/test-engineer"
+                "https://jobs.example.com/test-engineer",
+                title="Test Engineer",
+                company="Example Devices",
             ),
         )
         patcher.start()
@@ -221,6 +271,7 @@ class ListingVerificationRunnerViewTests(TestCase):
             ListingVerificationRun.RunStatus.NEEDS_REVIEW,
         )
         self.assertEqual(run.http_status_code, 200)
+        self.assertEqual(run.detected_listing_status, JobPosting.ListingStatus.OPEN)
 
     def test_existing_active_run_is_reused_instead_of_duplicated(self):
         active = ListingVerificationRun.objects.create(
@@ -258,13 +309,13 @@ class ListingVerificationRunnerViewTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
-    def test_job_detail_shows_run_action_and_history(self):
+    def test_job_detail_shows_interpretation_action_and_history(self):
         run = run_listing_verification(self.job)
 
         response = self.client.get(reverse("job_detail", args=[self.job.id]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "RUN VERIFICATION")
+        self.assertContains(response, "ANALYZE EMPLOYER PAGE")
         self.assertContains(response, "AUDIT EVERY CHECK")
         self.assertContains(response, run.get_status_display())
         self.assertContains(
@@ -275,7 +326,7 @@ class ListingVerificationRunnerViewTests(TestCase):
             ),
         )
 
-    def test_result_page_explains_retrieval_limit(self):
+    def test_result_page_explains_interpretation_boundary(self):
         run = run_listing_verification(self.job)
 
         response = self.client.get(
@@ -286,8 +337,9 @@ class ListingVerificationRunnerViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "CONTROLLED EMPLOYER-PAGE RETRIEVAL")
-        self.assertContains(response, "NETWORK REQUEST COMPLETED")
-        self.assertContains(response, "does not decide whether the role is open")
-        self.assertContains(response, "HTTP STATUS")
-        self.assertContains(response, "200")
+        self.assertContains(response, "EMPLOYER-PAGE INTERPRETATION")
+        self.assertContains(response, "DETERMINISTIC ANALYSIS")
+        self.assertContains(response, "review is required")
+        self.assertContains(response, "ROLE MATCH")
+        self.assertContains(response, "APPLICATION ACTION")
+        self.assertContains(response, "Open")
