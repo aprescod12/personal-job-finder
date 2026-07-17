@@ -1,0 +1,9 @@
+Medical-device software engineering
+Embedded software
+Firmware engineering
+Controls engineering
+Software verification and validation
+Test automation
+Software quality
+Software integration
+Product security
