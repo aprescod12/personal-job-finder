@@ -184,6 +184,81 @@ class JobRequirement(models.Model):
         return f"Requirements for {self.job}"
 
 
+class JobCalibration(models.Model):
+    class HumanRating(models.TextChoices):
+        STRONG = "strong", "Strong match"
+        POSSIBLE = "possible", "Possible match"
+        WEAK = "weak", "Weak match"
+        NOT_ELIGIBLE = "not_eligible", "Not eligible"
+
+    class OpportunityType(models.TextChoices):
+        PRIORITY = "priority", "Priority role"
+        ADJACENT = "adjacent", "Adjacent opportunity"
+        OUTSIDE = "outside", "Outside current priority"
+        UNSURE = "unsure", "Unsure"
+
+    PREDICTED_RATING_MAP = {
+        "STRONG MATCH": HumanRating.STRONG,
+        "GOOD MATCH": HumanRating.STRONG,
+        "POSSIBLE MATCH": HumanRating.POSSIBLE,
+        "WEAK MATCH": HumanRating.WEAK,
+        "DISQUALIFIED": HumanRating.NOT_ELIGIBLE,
+    }
+
+    job = models.OneToOneField(
+        JobPosting,
+        on_delete=models.CASCADE,
+        related_name="calibration",
+    )
+    human_rating = models.CharField(
+        max_length=20,
+        choices=HumanRating.choices,
+    )
+    opportunity_type = models.CharField(
+        max_length=20,
+        choices=OpportunityType.choices,
+        default=OpportunityType.UNSURE,
+    )
+    notes = models.TextField(blank=True)
+
+    predicted_score = models.PositiveSmallIntegerField(null=True, blank=True)
+    predicted_classification = models.CharField(max_length=40, blank=True)
+    predicted_track = models.CharField(max_length=40, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        verbose_name = "job calibration"
+        verbose_name_plural = "job calibrations"
+
+    @property
+    def predicted_human_rating(self):
+        return self.PREDICTED_RATING_MAP.get(self.predicted_classification, "")
+
+    @property
+    def agreement_status(self):
+        predicted = self.predicted_human_rating
+        if not predicted:
+            return "NEEDS EVIDENCE"
+        if predicted == self.human_rating:
+            return "ALIGNED"
+        return "REVIEW"
+
+    @property
+    def agreement_label(self):
+        labels = {
+            "ALIGNED": "Matcher agrees with your judgment",
+            "REVIEW": "Matcher and your judgment differ",
+            "NEEDS EVIDENCE": "Matcher needs more evidence",
+        }
+        return labels[self.agreement_status]
+
+    def __str__(self):
+        return f"Calibration for {self.job}"
+
+
 class CareerProfile(models.Model):
     class ExperienceLevel(models.TextChoices):
         ENTRY_LEVEL = "entry_level", "Entry level"
