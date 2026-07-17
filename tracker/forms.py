@@ -19,10 +19,19 @@ def normalize_line_list(value):
 
 
 class DeadlineValidationMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "deadline_status" in self.fields:
+            self.fields["deadline_status"].required = False
+
     def clean(self):
         cleaned_data = super().clean()
         deadline = cleaned_data.get("application_deadline")
-        deadline_status = cleaned_data.get("deadline_status")
+        deadline_status = (
+            cleaned_data.get("deadline_status")
+            or JobPosting.DeadlineStatus.UNKNOWN
+        )
+        cleaned_data["deadline_status"] = deadline_status
 
         if deadline and deadline_status != JobPosting.DeadlineStatus.CONFIRMED:
             cleaned_data["deadline_status"] = JobPosting.DeadlineStatus.CONFIRMED
