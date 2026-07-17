@@ -1,6 +1,6 @@
 # Amiri's Job Finder
 
-A learning-first Django application for collecting, reviewing, and prioritizing job opportunities. Stage 1 established the reliable tracking foundation. Stage 2 now combines structured career evidence, structured job requirements, vocabulary normalization, transparent job-match analysis, dashboard ranking, and human calibration.
+A learning-first Django application for collecting, reviewing, and prioritizing job opportunities. Stage 1 established the reliable tracking foundation. Stage 2 now combines structured career evidence, structured job requirements, vocabulary normalization, transparent job-match analysis, dashboard ranking, human calibration, and a curated real-posting review batch.
 
 ## Current features
 
@@ -33,6 +33,7 @@ A learning-first Django application for collecting, reviewing, and prioritizing 
 - Sort by match score, deadline, company, or date added
 - Record a human judgment and save a snapshot of the matcher result for calibration
 - Flag where the matcher agrees with the human judgment and where it needs review
+- Load an idempotent ten-posting calibration batch without pre-filling human judgments
 
 ## Transparent matching strategy
 
@@ -65,6 +66,26 @@ The program should not assume its first scoring weights are correct. For each re
 5. Use a set of roughly 10–20 reviewed jobs before changing scoring weights or vocabulary relationships.
 
 A calibration stores the score, classification, and opportunity lane that existed when the human judgment was saved. This preserves a usable record even after the matcher changes later.
+
+## First real-posting calibration batch
+
+The repository includes ten curated postings researched on **2026-07-16**. They cover direct early-career roles, internships, adjacent opportunities, work-authorization blockers, and stretch positions with experience gaps.
+
+Preview the batch without changing the database:
+
+```bash
+python manage.py load_stage2_calibration_batch --dry-run
+```
+
+Load it:
+
+```bash
+python manage.py load_stage2_calibration_batch
+```
+
+The command is idempotent and does not create human judgments. Use `--refresh` only to restore the curated fields on records originally created by this batch.
+
+See [`docs/stage2-calibration-batch-01.md`](docs/stage2-calibration-batch-01.md) for the role list and review procedure.
 
 ## Local setup
 
@@ -100,7 +121,7 @@ The `JobPosting`, `JobRequirement`, `CareerProfile`, and `JobCalibration` models
 
 ## Roadmap
 
-- **Stage 2 next:** calibrate the system against real postings, refine weights and vocabulary, and add semantic similarity for language that the explicit vocabulary does not cover
+- **Stage 2 next:** complete the first ten human reviews, measure where the matcher disagrees, refine weights and vocabulary from that evidence, and then add semantic similarity
 - **Stage 3:** tool-using AI agents that read the profile, analyze saved jobs, and review resume and LinkedIn content
 - **Stage 3 discovery expansion:** distinguish priority-role matches from adjacent opportunities that fit demonstrated background but are not the stated first choice
 - **Stage 4:** external job discovery, semantic retrieval, deduplication, scheduled searches, and notifications
