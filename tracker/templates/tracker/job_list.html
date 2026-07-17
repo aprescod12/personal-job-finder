@@ -3,26 +3,31 @@
 {% block title %}Job Dashboard{% endblock %}
 
 {% block content %}
-<section class="page-heading">
+<section class="page-heading dashboard-heading">
     <div>
-        <p class="eyebrow">PIPELINE / STAGE 01</p>
-        <h1>TRACK THE SEARCH. CONTROL THE PIPELINE.</h1>
-        <p class="muted">Build a clear record of every opportunity now. The future AI agent will search, analyze, and write into this same system.</p>
+        <p class="eyebrow">PIPELINE / STAGE 02</p>
+        <h1>RANK THE SEARCH. REVIEW THE EVIDENCE.</h1>
+        <p class="muted">Every score is calculated live from your career profile and the structured evidence saved for each opportunity.</p>
     </div>
 </section>
 
-<section class="stats-grid" aria-label="Job statistics">
+<section class="stats-grid dashboard-stats" aria-label="Job and match statistics">
     <article class="stat-card"><span>TOTAL JOBS</span><strong>{{ total_jobs }}</strong></article>
     <article class="stat-card"><span>SAVED</span><strong>{{ saved_jobs }}</strong></article>
     <article class="stat-card"><span>APPLIED</span><strong>{{ applied_jobs }}</strong></article>
     <article class="stat-card"><span>INTERVIEWS</span><strong>{{ interview_jobs }}</strong></article>
+    <article class="stat-card stat-card-match"><span>STRONG / GOOD</span><strong>{{ strong_good_jobs }}</strong></article>
+    <article class="stat-card stat-card-priority"><span>PRIORITY ROLES</span><strong>{{ priority_jobs }}</strong></article>
+    <article class="stat-card stat-card-adjacent"><span>ADJACENT</span><strong>{{ adjacent_jobs }}</strong></article>
+    <article class="stat-card stat-card-review"><span>CALIBRATED</span><strong>{{ calibrated_jobs }}</strong></article>
 </section>
 
-<form method="get" class="filter-bar">
-    <div class="filter-field grow">
+<form method="get" class="filter-bar dashboard-filter-bar">
+    <div class="filter-field dashboard-search-field">
         <label for="id_q">SEARCH</label>
         <input id="id_q" type="search" name="q" value="{{ query }}" placeholder="Title, company, location, or keyword">
     </div>
+
     <div class="filter-field">
         <label for="id_status">STATUS</label>
         <select id="id_status" name="status">
@@ -32,38 +37,119 @@
             {% endfor %}
         </select>
     </div>
-    <div class="filter-actions">
-        <button class="button button-secondary" type="submit">FILTER</button>
-        {% if query or selected_status %}
+
+    <div class="filter-field">
+        <label for="id_fit">MATCH QUALITY</label>
+        <select id="id_fit" name="fit">
+            <option value="">All match results</option>
+            {% for value, label in fit_choices %}
+                <option value="{{ value }}" {% if selected_fit == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="filter-field">
+        <label for="id_track">OPPORTUNITY TRACK</label>
+        <select id="id_track" name="track">
+            <option value="">All tracks</option>
+            {% for value, label in track_choices %}
+                <option value="{{ value }}" {% if selected_track == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="filter-field">
+        <label for="id_review">CALIBRATION</label>
+        <select id="id_review" name="review">
+            <option value="">All review states</option>
+            {% for value, label in review_choices %}
+                <option value="{{ value }}" {% if selected_review == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="filter-field">
+        <label for="id_sort">SORT</label>
+        <select id="id_sort" name="sort">
+            {% for value, label in sort_choices %}
+                <option value="{{ value }}" {% if selected_sort == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="filter-actions dashboard-filter-actions">
+        <button class="button button-secondary" type="submit">APPLY</button>
+        {% if filters_active %}
             <a class="text-link" href="{% url 'job_list' %}">CLEAR</a>
         {% endif %}
     </div>
 </form>
 
-{% if jobs %}
-    <section class="job-grid">
-        {% for job in jobs %}
-            <article class="job-card">
+{% if job_cards %}
+    <section class="job-grid dashboard-job-grid">
+        {% for card in job_cards %}
+            <article class="job-card ranked-job-card">
                 <div class="job-card-topline">
-                    <span class="status-badge status-{{ job.status }}">{{ job.get_status_display }}</span>
-                    <span class="muted small">ADDED {{ job.created_at|date:"M j, Y" }}</span>
+                    <span class="status-badge status-{{ card.job.status }}">{{ card.job.get_status_display }}</span>
+                    <span class="muted small">ADDED {{ card.job.created_at|date:"M j, Y" }}</span>
                 </div>
-                <h2><a href="{% url 'job_detail' job.id %}">{{ job.title }}</a></h2>
-                <p class="company-name">{{ job.company }}</p>
+
+                <div class="ranked-card-heading">
+                    <div>
+                        <h2><a href="{% url 'job_detail' card.job.id %}">{{ card.job.title }}</a></h2>
+                        <p class="company-name">{{ card.job.company }}</p>
+                    </div>
+
+                    {% if card.match.has_requirements %}
+                        <a class="dashboard-match-score match-{{ card.match.classification|slugify }}" href="{% url 'job_match' card.job.id %}" aria-label="View match analysis for {{ card.job.title }}">
+                            <strong>{{ card.match.score }}</strong>
+                            <span>/100</span>
+                        </a>
+                    {% else %}
+                        <a class="dashboard-match-score dashboard-match-empty" href="{% url 'job_requirements' card.job.id %}">
+                            <strong>—</strong>
+                            <span>ADD DATA</span>
+                        </a>
+                    {% endif %}
+                </div>
+
                 <div class="job-meta">
-                    {% if job.location %}<span>{{ job.location }}</span>{% endif %}
-                    {% if job.get_employment_type_display != "Unknown" %}<span>{{ job.get_employment_type_display }}</span>{% endif %}
-                    {% if job.get_work_arrangement_display != "Unknown" %}<span>{{ job.get_work_arrangement_display }}</span>{% endif %}
+                    {% if card.job.location %}<span>{{ card.job.location }}</span>{% endif %}
+                    {% if card.job.get_employment_type_display != "Unknown" %}<span>{{ card.job.get_employment_type_display }}</span>{% endif %}
+                    {% if card.job.get_work_arrangement_display != "Unknown" %}<span>{{ card.job.get_work_arrangement_display }}</span>{% endif %}
                 </div>
-                {% if job.next_action %}
-                    <div class="next-action">
-                        <strong>NEXT:</strong> {{ job.next_action }}
-                        {% if job.next_action_date %}<span>· {{ job.next_action_date|date:"M j" }}</span>{% endif %}
+
+                {% if card.match.has_requirements %}
+                    <div class="dashboard-match-meta">
+                        <span class="dashboard-match-label match-{{ card.match.classification|slugify }}">{{ card.match.classification }}</span>
+                        <span>{{ card.match.track }}</span>
+                        <span>{{ card.match.evidence_coverage }}% EVIDENCE</span>
+                    </div>
+                {% else %}
+                    <div class="dashboard-match-meta dashboard-match-needs-data">
+                        <span>NEEDS STRUCTURED REQUIREMENTS</span>
                     </div>
                 {% endif %}
+
+                {% if card.calibration %}
+                    <div class="calibration-chip calibration-{{ card.calibration_alignment|lower }}">
+                        <strong>YOUR REVIEW:</strong>
+                        <span>{{ card.calibration.get_verdict_display|upper }}</span>
+                        <small>{{ card.calibration_alignment }}</small>
+                    </div>
+                {% endif %}
+
+                {% if card.job.next_action %}
+                    <div class="next-action">
+                        <strong>NEXT:</strong> {{ card.job.next_action }}
+                        {% if card.job.next_action_date %}<span>· {{ card.job.next_action_date|date:"M j" }}</span>{% endif %}
+                    </div>
+                {% endif %}
+
                 <div class="card-actions">
-                    <a class="text-link" href="{% url 'job_detail' job.id %}">VIEW DETAILS</a>
-                    <a class="text-link" href="{% url 'job_edit' job.id %}">EDIT</a>
+                    <a class="text-link" href="{% url 'job_match' card.job.id %}">MATCH ANALYSIS</a>
+                    <a class="text-link" href="{% url 'job_detail' card.job.id %}">VIEW DETAILS</a>
+                    <a class="text-link" href="{% url 'job_edit' card.job.id %}">EDIT</a>
                 </div>
             </article>
         {% endfor %}
@@ -71,7 +157,7 @@
 {% else %}
     <section class="empty-state">
         <h2>NO MATCHING JOBS</h2>
-        <p>{% if query or selected_status %}Try clearing the filters.{% else %}Add your first opportunity to begin tracking it.{% endif %}</p>
+        <p>{% if filters_active %}Try clearing or widening the dashboard filters.{% else %}Add your first opportunity to begin tracking it.{% endif %}</p>
         <a class="button button-primary" href="{% url 'job_create' %}">ADD A JOB</a>
     </section>
 {% endif %}
