@@ -117,7 +117,11 @@ class WeightModelComparisonTests(TestCase):
             "Industry-sensitive role",
             JobCalibration.HumanRating.STRONG,
         )
-        analyze.return_value = self.result_with_fractions(0.2, 0.9)
+        analyze.return_value = self.result_with_fractions(
+            0.2,
+            0.9,
+            other_fraction=0.72,
+        )
 
         comparison = build_weight_model_comparison(
             self.profile,
