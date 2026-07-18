@@ -1,6 +1,11 @@
 # Virtual environment
 .venv/
 
+# Local environment variables and secrets
+.env
+.env.*
+!.env.example
+
 # Python-generated files
 __pycache__/
 *.py[cod]
