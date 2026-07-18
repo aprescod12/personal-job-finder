@@ -3,7 +3,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from .intake_forms import JobIntakePasteForm, JobIntakeReviewForm
-from .services.job_intake import extract_job_intake
+from .services.job_extraction import JobExtractionError, extract_job
 
 
 INTAKE_SESSION_KEY = "stage4_job_intake_draft"
@@ -16,23 +16,37 @@ def job_intake_start(request):
             raw_text = form.cleaned_data["raw_text"]
             source_url = form.cleaned_data.get("source_url", "")
             source_label = form.cleaned_data.get("source_label", "")
-            extraction = extract_job_intake(
-                raw_text,
-                source_url=source_url,
-                source_label=source_label,
-            )
-            request.session[INTAKE_SESSION_KEY] = {
-                "raw_text": raw_text,
-                "source_url": source_url,
-                "source_label": source_label,
-                "extraction": extraction,
-            }
-            request.session.modified = True
-            messages.info(
-                request,
-                "Draft extracted. Review every field before creating the tracked job.",
-            )
-            return redirect("job_intake_review")
+
+            try:
+                extraction = extract_job(
+                    raw_text,
+                    source_url=source_url,
+                    source_label=source_label,
+                )
+            except JobExtractionError as exc:
+                form.add_error(
+                    None,
+                    (
+                        "The job draft could not be extracted. "
+                        f"Review the extractor configuration and try again. {exc}"
+                    ),
+                )
+            else:
+                request.session[INTAKE_SESSION_KEY] = {
+                    "raw_text": raw_text,
+                    "source_url": source_url,
+                    "source_label": source_label,
+                    "extraction": extraction,
+                }
+                request.session.modified = True
+                messages.info(
+                    request,
+                    (
+                        "Draft extracted. Review every field before creating "
+                        "the tracked job."
+                    ),
+                )
+                return redirect("job_intake_review")
     else:
         form = JobIntakePasteForm()
 
@@ -62,7 +76,10 @@ def job_intake_review(request):
             request.session.modified = True
             messages.success(
                 request,
-                "Reviewed intake saved. Verify the listing before treating it as an active application target.",
+                (
+                    "Reviewed intake saved. Verify the listing before treating "
+                    "it as an active application target."
+                ),
             )
             return redirect("job_detail", job_id=job.id)
     else:

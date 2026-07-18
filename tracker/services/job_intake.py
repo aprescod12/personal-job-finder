@@ -3,6 +3,11 @@ from datetime import datetime
 
 from tracker.models import JobPosting, JobRequirement
 
+from .job_extraction import (
+    BaseJobExtractor,
+    JobExtractionRequest,
+)
+
 
 PARSER_VERSION = "deterministic-intake-v1"
 
@@ -37,16 +42,19 @@ _SECTION_HEADINGS = {
     },
 }
 
-_ALL_SECTION_HEADINGS = set().union(*_SECTION_HEADINGS.values(), {
-    "about us",
-    "about the company",
-    "benefits",
-    "compensation",
-    "salary",
-    "equal opportunity",
-    "how to apply",
-    "application process",
-})
+_ALL_SECTION_HEADINGS = set().union(
+    *_SECTION_HEADINGS.values(),
+    {
+        "about us",
+        "about the company",
+        "benefits",
+        "compensation",
+        "salary",
+        "equal opportunity",
+        "how to apply",
+        "application process",
+    },
+)
 
 _DATE_FORMATS = (
     "%Y-%m-%d",
@@ -70,15 +78,25 @@ def _normalized_heading(value):
 
 
 def _lines(raw_text):
-    return [_clean_line(line) for line in (raw_text or "").splitlines() if _clean_line(line)]
+    return [
+        _clean_line(line)
+        for line in (raw_text or "").splitlines()
+        if _clean_line(line)
+    ]
 
 
 def _find_labeled_value(lines, labels):
     for line in lines:
         for label in labels:
-            match = re.match(rf"^{re.escape(label)}\s*[:\-]\s*(.+)$", line, re.IGNORECASE)
+            match = re.match(
+                rf"^{re.escape(label)}\s*[:\-]\s*(.+)$",
+                line,
+                re.IGNORECASE,
+            )
             if match:
-                return match.group(1).strip(), f"Detected from labeled field: {label}."
+                return match.group(1).strip(), (
+                    f"Detected from labeled field: {label}."
+                )
     return "", ""
 
 
@@ -155,12 +173,26 @@ def _detect_seniority(title, text):
 
 
 def _parse_deadline(text):
-    rolling = re.search(r"open until filled|rolling applications?|applications? accepted on a rolling basis", text, re.IGNORECASE)
+    rolling = re.search(
+        (
+            r"open until filled|rolling applications?|"
+            r"applications? accepted on a rolling basis"
+        ),
+        text,
+        re.IGNORECASE,
+    )
     if rolling:
-        return JobPosting.DeadlineStatus.ROLLING, "", "Detected rolling or open-until-filled language."
+        return (
+            JobPosting.DeadlineStatus.ROLLING,
+            "",
+            "Detected rolling or open-until-filled language.",
+        )
 
     label_match = re.search(
-        r"(?:application deadline|apply by|closing date|applications? close)\s*[:\-]?\s*([^\n.;]{4,40})",
+        (
+            r"(?:application deadline|apply by|closing date|applications? close)"
+            r"\s*[:\-]?\s*([^\n.;]{4,40})"
+        ),
         text,
         re.IGNORECASE,
     )
@@ -169,21 +201,45 @@ def _parse_deadline(text):
         for date_format in _DATE_FORMATS:
             try:
                 parsed = datetime.strptime(candidate, date_format).date()
-                return JobPosting.DeadlineStatus.CONFIRMED, parsed.isoformat(), f"Detected deadline from: {candidate}."
+                return (
+                    JobPosting.DeadlineStatus.CONFIRMED,
+                    parsed.isoformat(),
+                    f"Detected deadline from: {candidate}.",
+                )
             except ValueError:
                 continue
-        return JobPosting.DeadlineStatus.UNKNOWN, "", f"Found deadline language but could not safely parse: {candidate}."
+        return (
+            JobPosting.DeadlineStatus.UNKNOWN,
+            "",
+            f"Found deadline language but could not safely parse: {candidate}.",
+        )
 
-    if re.search(r"no application deadline|deadline not stated|no deadline", text, re.IGNORECASE):
-        return JobPosting.DeadlineStatus.NOT_STATED, "", "Detected an explicit no-deadline statement."
+    if re.search(
+        r"no application deadline|deadline not stated|no deadline",
+        text,
+        re.IGNORECASE,
+    ):
+        return (
+            JobPosting.DeadlineStatus.NOT_STATED,
+            "",
+            "Detected an explicit no-deadline statement.",
+        )
 
-    return JobPosting.DeadlineStatus.UNKNOWN, "", "No reliable deadline statement was detected."
+    return (
+        JobPosting.DeadlineStatus.UNKNOWN,
+        "",
+        "No reliable deadline statement was detected.",
+    )
 
 
 def _extract_education(required_text):
     education_lines = []
     for line in required_text.splitlines():
-        if re.search(r"\b(bachelor|master|ph\.?d|degree|b\.?s\.?|m\.?s\.?)\b", line, re.IGNORECASE):
+        if re.search(
+            r"\b(bachelor|master|ph\.?d|degree|b\.?s\.?|m\.?s\.?)\b",
+            line,
+            re.IGNORECASE,
+        ):
             education_lines.append(line)
     return "\n".join(education_lines)
 
@@ -191,87 +247,147 @@ def _extract_education(required_text):
 def _extract_work_authorization(lines):
     matches = []
     for line in lines:
-        if re.search(r"sponsor|work authorization|authorized to work|visa|citizen|permanent resident", line, re.IGNORECASE):
+        if re.search(
+            (
+                r"sponsor|work authorization|authorized to work|visa|citizen|"
+                r"permanent resident"
+            ),
+            line,
+            re.IGNORECASE,
+        ):
             matches.append(line)
     return "\n".join(matches[:8])
 
 
+class DeterministicJobExtractor(BaseJobExtractor):
+    provider_key = "deterministic"
+    provider_label = "Deterministic local parser"
+    provider_version = PARSER_VERSION
+    extraction_mode = "deterministic"
+
+    def extract(self, request: JobExtractionRequest):
+        raw_text = request.listing_text
+        cleaned_lines = _lines(raw_text)
+        evidence = []
+        warnings = []
+
+        title, note = _find_labeled_value(
+            cleaned_lines,
+            _LABEL_PATTERNS["title"],
+        )
+        if not title:
+            title, note = _first_title_candidate(cleaned_lines)
+        if note:
+            evidence.append(note)
+
+        company, note = _find_labeled_value(
+            cleaned_lines,
+            _LABEL_PATTERNS["company"],
+        )
+        if note:
+            evidence.append(note)
+        if not company:
+            warnings.append(
+                "Company was not confidently detected; review is required."
+            )
+
+        location, note = _find_labeled_value(
+            cleaned_lines,
+            _LABEL_PATTERNS["location"],
+        )
+        if note:
+            evidence.append(note)
+        if not location:
+            for line in cleaned_lines[:12]:
+                if line.casefold() in {"remote", "hybrid", "on-site", "onsite"}:
+                    location = line
+                    evidence.append(
+                        "Used a standalone work-location line as the location hint."
+                    )
+                    break
+
+        required_skills = _extract_section(
+            cleaned_lines,
+            _SECTION_HEADINGS["required_skills"],
+        )
+        preferred_skills = _extract_section(
+            cleaned_lines,
+            _SECTION_HEADINGS["preferred_skills"],
+        )
+        responsibilities = _extract_section(
+            cleaned_lines,
+            _SECTION_HEADINGS["responsibilities"],
+        )
+        required_education = _extract_education(required_skills)
+        work_authorization = _extract_work_authorization(cleaned_lines)
+
+        deadline_status, application_deadline, deadline_note = _parse_deadline(
+            raw_text
+        )
+        evidence.append(deadline_note)
+
+        employment_type = _detect_employment_type(raw_text)
+        work_arrangement = _detect_work_arrangement(raw_text)
+        seniority_level = _detect_seniority(title, raw_text)
+
+        if not title:
+            warnings.append(
+                "Title was not confidently detected; review is required."
+            )
+        if not required_skills:
+            warnings.append("No clear qualifications section was detected.")
+
+        hard_disqualifiers = ""
+        if re.search(
+            r"no sponsorship|cannot sponsor|must be (?:a )?u\.?s\.? citizen",
+            work_authorization,
+            re.IGNORECASE,
+        ):
+            hard_disqualifiers = work_authorization
+
+        return self.result(
+            job={
+                "title": title,
+                "company": company,
+                "location": location,
+                "job_url": request.source_url,
+                "source": request.source_label or "Pasted listing",
+                "employment_type": employment_type,
+                "work_arrangement": work_arrangement,
+                "deadline_status": deadline_status,
+                "application_deadline": application_deadline,
+                "description": raw_text.strip(),
+                "next_action": "Verify listing and review requirements",
+            },
+            requirements={
+                "role_family": title,
+                "seniority_level": seniority_level,
+                "industry": "",
+                "required_skills": required_skills,
+                "preferred_skills": preferred_skills,
+                "required_education": required_education,
+                "preferred_education": "",
+                "minimum_years_experience": None,
+                "maximum_years_experience": None,
+                "responsibilities": responsibilities,
+                "certifications": "",
+                "work_authorization_requirements": work_authorization,
+                "hard_disqualifiers": hard_disqualifiers,
+                "requirement_notes": (
+                    "Review every extracted field against the original posting "
+                    "before relying on the match score."
+                ),
+            },
+            evidence=evidence,
+            warnings=warnings,
+        )
+
+
 def extract_job_intake(raw_text, *, source_url="", source_label=""):
-    cleaned_lines = _lines(raw_text)
-    evidence = []
-    warnings = []
-
-    title, note = _find_labeled_value(cleaned_lines, _LABEL_PATTERNS["title"])
-    if not title:
-        title, note = _first_title_candidate(cleaned_lines)
-    if note:
-        evidence.append(note)
-
-    company, note = _find_labeled_value(cleaned_lines, _LABEL_PATTERNS["company"])
-    if note:
-        evidence.append(note)
-    if not company:
-        warnings.append("Company was not confidently detected; review is required.")
-
-    location, note = _find_labeled_value(cleaned_lines, _LABEL_PATTERNS["location"])
-    if note:
-        evidence.append(note)
-    if not location:
-        for line in cleaned_lines[:12]:
-            if line.casefold() in {"remote", "hybrid", "on-site", "onsite"}:
-                location = line
-                evidence.append("Used a standalone work-location line as the location hint.")
-                break
-
-    required_skills = _extract_section(cleaned_lines, _SECTION_HEADINGS["required_skills"])
-    preferred_skills = _extract_section(cleaned_lines, _SECTION_HEADINGS["preferred_skills"])
-    responsibilities = _extract_section(cleaned_lines, _SECTION_HEADINGS["responsibilities"])
-    required_education = _extract_education(required_skills)
-    work_authorization = _extract_work_authorization(cleaned_lines)
-
-    deadline_status, application_deadline, deadline_note = _parse_deadline(raw_text)
-    evidence.append(deadline_note)
-
-    employment_type = _detect_employment_type(raw_text)
-    work_arrangement = _detect_work_arrangement(raw_text)
-    seniority_level = _detect_seniority(title, raw_text)
-
-    if not title:
-        warnings.append("Title was not confidently detected; review is required.")
-    if not required_skills:
-        warnings.append("No clear qualifications section was detected.")
-
-    return {
-        "parser_version": PARSER_VERSION,
-        "job": {
-            "title": title,
-            "company": company,
-            "location": location,
-            "job_url": source_url,
-            "source": source_label or "Pasted listing",
-            "employment_type": employment_type,
-            "work_arrangement": work_arrangement,
-            "deadline_status": deadline_status,
-            "application_deadline": application_deadline,
-            "description": raw_text.strip(),
-            "next_action": "Verify listing and review requirements",
-        },
-        "requirements": {
-            "role_family": title,
-            "seniority_level": seniority_level,
-            "industry": "",
-            "required_skills": required_skills,
-            "preferred_skills": preferred_skills,
-            "required_education": required_education,
-            "preferred_education": "",
-            "minimum_years_experience": None,
-            "maximum_years_experience": None,
-            "responsibilities": responsibilities,
-            "certifications": "",
-            "work_authorization_requirements": work_authorization,
-            "hard_disqualifiers": work_authorization if re.search(r"no sponsorship|cannot sponsor|must be (?:a )?u\.?s\.? citizen", work_authorization, re.IGNORECASE) else "",
-            "requirement_notes": "Review every extracted field against the original posting before relying on the match score.",
-        },
-        "evidence": evidence,
-        "warnings": warnings,
-    }
+    """Backward-compatible wrapper for the Stage 4 Step 1 parser API."""
+    request = JobExtractionRequest(
+        listing_text=raw_text,
+        source_url=source_url,
+        source_label=source_label,
+    )
+    return DeterministicJobExtractor().extract(request).to_dict()
