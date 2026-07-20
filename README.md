@@ -2,6 +2,22 @@
 
 A learning-first Django application for collecting, verifying, reviewing, and prioritizing job opportunities. Stage 1 established the tracking foundation. Stage 2 now combines structured career evidence, structured job requirements, listing reliability, transparent job-match analysis, human calibration, controlled semantic similarity, blind validation, and weight-model comparison.
 
+## Architecture source of truth
+
+The final product uses seven logical agents inside one controlled Django workflow:
+
+1. Coordinator Agent
+2. Candidate Profile Agent
+3. Job Discovery Agent
+4. Job Processing Agent
+5. Job Evaluation Agent
+6. Project Relevance and Development Agent
+7. Presentation and Tracking Agent
+
+See [`docs/architecture/final-agent-architecture.md`](docs/architecture/final-agent-architecture.md) for responsibilities, boundaries, workflow contracts, implementation status, and change-control requirements.
+
+Any decision that adds, removes, renames, combines, splits, or materially changes an agent must update that architecture document in the same pull request.
+
 ## Current features
 
 ### Stage 1 — Job tracker
@@ -146,10 +162,22 @@ The `JobPosting`, `JobRequirement`, `CareerProfile`, and `JobCalibration` models
 7. Let future AI agents use the same verified records and scoring tools.
 8. Review resume and LinkedIn evidence before adding it to the candidate profile.
 
-## Roadmap
+## Current roadmap
 
-- **Stage 2 next:** record matcher-version history in saved snapshots, add candidate-evidence records for resume and LinkedIn review, and complete final regression testing
-- **Stage 3:** tool-using AI agents that read the profile, verify listings, analyze jobs, and review resume and LinkedIn content
-- **Stage 4:** external job discovery, semantic retrieval, deduplication, scheduled searches, and notifications
+The detailed roadmap and ownership boundaries are maintained in the architecture source of truth.
 
-The agent will not submit applications, contact employers, or change important records without explicit approval.
+The recommended implementation sequence from the current state is:
+
+1. Test the OpenAI job-extraction backend with one controlled listing.
+2. Add deterministic fallback and disclose which extractor was used.
+3. Add duplicate detection.
+4. Add job-processing history and provenance.
+5. Build resume ingestion and candidate-evidence review.
+6. Build the Job Discovery Agent and discovery inbox.
+7. Strengthen evaluation versioning and actionable explanations.
+8. Build the Project Relevance and Development Agent.
+9. Expand tasks, reminders, and application tracking.
+10. Build the Coordinator Agent over stable component interfaces.
+11. Complete production readiness and deployment.
+
+The application will not submit applications, contact employers, or change important records without explicit approval.
