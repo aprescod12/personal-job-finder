@@ -29,5 +29,25 @@ jobs:
       - name: Run Django system checks
         run: python manage.py check
 
-      - name: Run tests
-        run: python manage.py test tracker.test_job_extraction_fallback tracker.test_job_extraction_provider --verbosity 2
+      - name: Capture targeted test output
+        id: targeted_tests
+        shell: bash
+        run: |
+          set +e
+          python manage.py test tracker.test_job_extraction_fallback tracker.test_job_extraction_provider --verbosity 2 > step3c-test-output.txt 2>&1
+          code=$?
+          echo "$code" > step3c-test-exit-code.txt
+          exit 0
+
+      - name: Upload targeted test output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: step3c-test-output
+          path: |
+            step3c-test-output.txt
+            step3c-test-exit-code.txt
+
+      - name: Enforce targeted test result
+        shell: bash
+        run: test "$(cat step3c-test-exit-code.txt)" = "0"
