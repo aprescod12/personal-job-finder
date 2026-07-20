@@ -4,6 +4,7 @@ from django.urls import reverse
 from .intake_views import INTAKE_SESSION_KEY
 from .models import JobPosting, JobRequirement
 from .services.job_extraction import (
+    ERROR_CONFIGURATION,
     BaseJobExtractor,
     JobExtractionError,
     JobExtractionRequest,
@@ -104,26 +105,40 @@ class ExtractionProviderContractTests(TestCase):
         draft = self.client.session[INTAKE_SESSION_KEY]
         self.assertEqual(draft["extraction"]["provider"]["key"], "fake")
         self.assertEqual(draft["extraction"]["job"]["title"], "AI Draft Title")
+        self.assertFalse(draft["extraction"]["orchestration"]["fallback_used"])
 
         review = self.client.get(reverse("job_intake_review"))
         self.assertContains(review, "FAKE TEST EXTRACTOR")
         self.assertContains(review, "FAKE-V1")
         self.assertContains(review, "No job has been created yet")
 
-    @override_settings(JOB_INTAKE_EXTRACTOR="tracker.models.JobPosting")
-    def test_invalid_provider_configuration_is_rejected_cleanly(self):
+    @override_settings(
+        JOB_INTAKE_EXTRACTOR="tracker.models.JobPosting",
+        JOB_INTAKE_FALLBACK_ENABLED=True,
+        JOB_INTAKE_FALLBACK_EXTRACTOR=(
+            "tracker.services.job_intake.DeterministicJobExtractor"
+        ),
+    )
+    def test_invalid_primary_configuration_uses_disclosed_fallback(self):
         response = self.client.post(
             reverse("job_intake_start"),
             {"raw_text": SIMPLE_LISTING},
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(
-            response,
-            "The configured job extractor must implement BaseJobExtractor",
+        self.assertRedirects(response, reverse("job_intake_review"))
+        draft = self.client.session[INTAKE_SESSION_KEY]
+        extraction = draft["extraction"]
+        self.assertEqual(extraction["provider"]["key"], "deterministic")
+        self.assertTrue(extraction["orchestration"]["fallback_used"])
+        self.assertEqual(
+            extraction["orchestration"]["attempts"][0]["error_category"],
+            ERROR_CONFIGURATION,
         )
-        self.assertNotIn(INTAKE_SESSION_KEY, self.client.session)
         self.assertEqual(JobPosting.objects.count(), 0)
+
+        review = self.client.get(reverse("job_intake_review"))
+        self.assertContains(review, "FALLBACK USED")
+        self.assertContains(review, "CONFIGURATION")
 
     def test_non_serializable_provider_output_is_rejected(self):
         with self.assertRaises(JobExtractionError):
