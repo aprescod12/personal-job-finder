@@ -14,12 +14,54 @@
         <p class="muted">Correct every missing or inaccurate field before creating the job and calculating a match score.</p>
     </div>
     <div class="intake-boundary-card">
-        <span>EXTRACTOR</span>
+        <span>RESULT EXTRACTOR</span>
         <strong>{{ extraction.provider.label|default:"Job extraction provider"|upper }}</strong>
         <small>{{ extraction.provider.version|default:extraction.parser_version|upper }} · {{ extraction.provider.mode|default:"deterministic"|upper }}</small>
+        {% if extraction.orchestration %}<small>{{ extraction.orchestration.total_elapsed_ms }} MS TOTAL</small>{% endif %}
         <small>No job has been created yet.</small>
     </div>
 </section>
+
+{% if extraction.orchestration.manual_review_required %}
+<section class="panel intake-orchestration-alert intake-orchestration-manual">
+    <div>
+        <p class="eyebrow">MANUAL REVIEW REQUIRED</p>
+        <h2>NO EXTRACTOR PRODUCED A STRUCTURED DRAFT.</h2>
+        <p>The original listing is preserved below. Complete the fields manually and rely on the source text, not the empty draft.</p>
+    </div>
+    <strong>NOTHING WAS SAVED</strong>
+</section>
+{% elif extraction.orchestration.fallback_used %}
+<section class="panel intake-orchestration-alert intake-orchestration-fallback">
+    <div>
+        <p class="eyebrow">FALLBACK USED</p>
+        <h2>THE PRIMARY EXTRACTOR WAS UNAVAILABLE.</h2>
+        <p>This draft came from the deterministic fallback. Review every field carefully; it must not be mistaken for an AI-assisted result.</p>
+    </div>
+    <strong>HUMAN REVIEW REQUIRED</strong>
+</section>
+{% endif %}
+
+{% if extraction.orchestration %}
+<details class="panel intake-attempt-details">
+    <summary>VIEW EXTRACTION ATTEMPTS AND TIMING</summary>
+    <div class="intake-attempt-grid">
+        {% for attempt in extraction.orchestration.attempts %}
+        <article>
+            <span>ATTEMPT {{ forloop.counter }}</span>
+            <strong>{{ attempt.provider.label|default:attempt.provider_path }}</strong>
+            <small>{{ attempt.provider.mode|default:"unknown"|upper }} · {{ attempt.elapsed_ms }} MS</small>
+            {% if attempt.success %}
+                <p>Completed successfully.</p>
+            {% else %}
+                <p><b>{{ attempt.error_category|default:"provider_failure"|upper }}</b>: {{ attempt.error_message }}</p>
+                {% if attempt.retryable %}<small>This failure may be temporary.</small>{% endif %}
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+</details>
+{% endif %}
 
 <section class="panel intake-evidence-panel">
     <div><p class="eyebrow">EXTRACTION EVIDENCE</p><h2>WHAT WAS DETECTED</h2></div>
