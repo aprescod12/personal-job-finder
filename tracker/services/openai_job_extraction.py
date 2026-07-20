@@ -8,7 +8,18 @@ from typing import Any
 from django.conf import settings
 
 from .ai_job_extraction import StructuredAIJobExtractor
-from .job_extraction import JobExtractionError
+from .job_extraction import (
+    ERROR_AUTHENTICATION,
+    ERROR_CONFIGURATION,
+    ERROR_CONNECTION,
+    ERROR_INVALID_RESPONSE,
+    ERROR_PERMISSION,
+    ERROR_PROVIDER_FAILURE,
+    ERROR_REFUSAL,
+    ERROR_TIMEOUT,
+    ERROR_USAGE_LIMIT,
+    JobExtractionError,
+)
 
 OPENAI_BACKEND_VERSION = "openai-responses-structured-v1"
 
@@ -45,29 +56,69 @@ class OpenAIResponsesBackend:
             return self.client
         if not os.getenv("OPENAI_API_KEY", "").strip():
             raise JobExtractionError(
-                "OpenAI extraction is not configured. Add the API key to the local environment."
+                "OpenAI extraction is not configured. Add the API key to the local environment.",
+                category=ERROR_CONFIGURATION,
             )
         try:
             from openai import OpenAI
         except ImportError as exc:
             raise JobExtractionError(
-                "The OpenAI Python package is not installed. Install project dependencies first."
+                "The OpenAI Python package is not installed. Install project dependencies first.",
+                category=ERROR_CONFIGURATION,
             ) from exc
         return OpenAI(timeout=self.timeout_seconds, max_retries=1)
 
     @staticmethod
     def _provider_error(exc: Exception) -> JobExtractionError:
-        messages = {
-            "AuthenticationError": "OpenAI authentication failed. Check the local API key.",
-            "PermissionDeniedError": "The OpenAI project cannot use the configured model.",
-            "RateLimitError": "OpenAI rate or usage limits prevented extraction.",
-            "APITimeoutError": "The OpenAI extraction request timed out.",
-            "APIConnectionError": "The application could not connect to OpenAI.",
-            "BadRequestError": "OpenAI rejected the structured extraction request.",
-            "NotFoundError": "The configured OpenAI model was not found.",
+        failures = {
+            "AuthenticationError": (
+                "OpenAI authentication failed. Check the local API key.",
+                ERROR_AUTHENTICATION,
+                False,
+            ),
+            "PermissionDeniedError": (
+                "The OpenAI project cannot use the configured model.",
+                ERROR_PERMISSION,
+                False,
+            ),
+            "RateLimitError": (
+                "OpenAI rate or usage limits prevented extraction.",
+                ERROR_USAGE_LIMIT,
+                True,
+            ),
+            "APITimeoutError": (
+                "The OpenAI extraction request timed out.",
+                ERROR_TIMEOUT,
+                True,
+            ),
+            "APIConnectionError": (
+                "The application could not connect to OpenAI.",
+                ERROR_CONNECTION,
+                True,
+            ),
+            "BadRequestError": (
+                "OpenAI rejected the structured extraction request.",
+                ERROR_INVALID_RESPONSE,
+                False,
+            ),
+            "NotFoundError": (
+                "The configured OpenAI model was not found.",
+                ERROR_CONFIGURATION,
+                False,
+            ),
         }
+        message, category, retryable = failures.get(
+            type(exc).__name__,
+            (
+                "The OpenAI extraction request failed.",
+                ERROR_PROVIDER_FAILURE,
+                False,
+            ),
+        )
         return JobExtractionError(
-            messages.get(type(exc).__name__, "The OpenAI extraction request failed.")
+            message,
+            category=category,
+            retryable=retryable,
         )
 
     @staticmethod
@@ -87,7 +138,10 @@ class OpenAIResponsesBackend:
         input_text: str,
     ) -> Mapping[str, Any]:
         if not self.model:
-            raise JobExtractionError("OpenAI extraction has no configured model.")
+            raise JobExtractionError(
+                "OpenAI extraction has no configured model.",
+                category=ERROR_CONFIGURATION,
+            )
 
         try:
             response = self._get_client().responses.create(
@@ -114,26 +168,34 @@ class OpenAIResponsesBackend:
         status = str(getattr(response, "status", "") or "").strip()
         if status and status != "completed":
             raise JobExtractionError(
-                f"OpenAI extraction did not complete successfully (status: {status})."
+                f"OpenAI extraction did not complete successfully (status: {status}).",
+                category=ERROR_INVALID_RESPONSE,
+                retryable=status in {"incomplete", "queued", "in_progress"},
             )
 
         output_text = str(getattr(response, "output_text", "") or "").strip()
         if not output_text:
             if self._find_refusal(response):
                 raise JobExtractionError(
-                    "OpenAI declined to produce the structured extraction."
+                    "OpenAI declined to produce the structured extraction.",
+                    category=ERROR_REFUSAL,
                 )
-            raise JobExtractionError("OpenAI returned no structured extraction content.")
+            raise JobExtractionError(
+                "OpenAI returned no structured extraction content.",
+                category=ERROR_INVALID_RESPONSE,
+            )
 
         try:
             payload = json.loads(output_text)
         except json.JSONDecodeError as exc:
             raise JobExtractionError(
-                "OpenAI returned content that was not valid JSON."
+                "OpenAI returned content that was not valid JSON.",
+                category=ERROR_INVALID_RESPONSE,
             ) from exc
         if not isinstance(payload, Mapping):
             raise JobExtractionError(
-                "OpenAI returned JSON whose top-level value was not an object."
+                "OpenAI returned JSON whose top-level value was not an object.",
+                category=ERROR_INVALID_RESPONSE,
             )
         return payload
 
@@ -148,7 +210,8 @@ class OpenAIJobExtractor(StructuredAIJobExtractor):
         if backend is None:
             if not getattr(settings, "JOB_INTAKE_AI_ENABLED", False):
                 raise JobExtractionError(
-                    "AI job extraction is disabled. Enable it only after local configuration is ready."
+                    "AI job extraction is disabled. Enable it only after local configuration is ready.",
+                    category=ERROR_CONFIGURATION,
                 )
             backend = OpenAIResponsesBackend()
         super().__init__(backend=backend)
