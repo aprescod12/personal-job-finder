@@ -1,0 +1,215 @@
+{
+  "schema_version": "job-extraction-evaluation-case-v1",
+  "case_id": "case-001-organon-medical-device-coop",
+  "title": "Organon Medical Device Engineering Co-op",
+  "role_category": "medical-device-engineering-internship",
+  "source": {
+    "company": "Organon",
+    "requisition_id": "R540092",
+    "captured_date": "2026-07-20",
+    "listing_file": "listing.txt",
+    "notes_file": "notes.md",
+    "source_url": ""
+  },
+  "expected": {
+    "job": {
+      "title": "Co-Op - Medical Device Engineer - Women's Health",
+      "company": "Organon",
+      "location": "Plymouth Meeting, Pennsylvania, United States of America",
+      "employment_type": "internship",
+      "work_arrangement": "unknown",
+      "salary_text": "",
+      "date_posted": null,
+      "deadline_status": "not_stated",
+      "application_deadline": null
+    },
+    "requirements": {
+      "role_family": "Medical Device Engineering",
+      "seniority_level": "internship",
+      "industry_tags": [
+        "Medical devices",
+        "Healthcare",
+        "Women's health",
+        "Combination products"
+      ],
+      "required_skills": [
+        "Organization",
+        "Problem-solving",
+        "Methodical technical work",
+        "Written communication",
+        "Verbal communication",
+        "Interpersonal skills",
+        "Microsoft Excel",
+        "Microsoft Word",
+        "Microsoft PowerPoint",
+        "Professional challenge of the status quo",
+        "Familiarity with tensile and compression test equipment"
+      ],
+      "preferred_skills": [
+        "CAD models and drawings",
+        "SolidWorks or similar CAD software",
+        "Instron tensile/compression machine experience"
+      ],
+      "required_education": [
+        "Currently enrolled in a bachelor's or master's degree in an engineering or scientific discipline"
+      ],
+      "preferred_education": [],
+      "minimum_years_experience": null,
+      "maximum_years_experience": null,
+      "responsibilities": [
+        "Work with Technical Operations Engineers",
+        "Execute device test methods for design verification",
+        "Develop test methods through final test reports",
+        "Create device drawings in SolidWorks to support technical projects"
+      ],
+      "certifications": [],
+      "work_authorization_requirements": [
+        "US and PR Residents Only",
+        "VISA Sponsorship: No"
+      ],
+      "hard_disqualifiers": [
+        "Visa sponsorship unavailable"
+      ],
+      "requirement_notes": "Travel and credentialing requirements may include vaccination prerequisites; the listing also states that no travel is required."
+    },
+    "supplemental": {
+      "employment_category": "intern_coop",
+      "schedule": "full_time",
+      "employment_term": "fixed_term",
+      "requisition_id": "R540092",
+      "openings": 1,
+      "relocation": "domestic",
+      "travel": "no_travel_required",
+      "driving_license_required": false
+    }
+  },
+  "critical_checks": [
+    {
+      "id": "ORG-001-company-and-location",
+      "severity": "critical",
+      "description": "Identify the employer and the complete stated location.",
+      "expected_behavior": "Return Organon and Plymouth Meeting, Pennsylvania, United States of America without invention or omission.",
+      "evidence_quotes": [
+        "Organon is recruiting for the position",
+        "Plymouth Meeting, Pennsylvania, United States of America"
+      ]
+    },
+    {
+      "id": "ORG-002-enrollment-not-completion",
+      "severity": "critical",
+      "description": "Preserve current degree enrollment as the education requirement.",
+      "expected_behavior": "Do not rewrite the requirement as a completed bachelor's or master's degree.",
+      "evidence_quotes": [
+        "Enrolled in Bachelor's or Master's degree in an engineering/scientific discipline."
+      ]
+    },
+    {
+      "id": "ORG-003-required-versus-preferred",
+      "severity": "critical",
+      "description": "Keep explicitly preferred CAD and Instron experience separate from required qualifications.",
+      "expected_behavior": "SolidWorks/CAD and Instron experience must remain preferred, while general tensile/compression equipment familiarity may remain an expected skill.",
+      "evidence_quotes": [
+        "Preferred: experience in CAD models and drawings using SolidWorks or a similar software package. Experience in Instron Tensile/Compression machine."
+      ]
+    },
+    {
+      "id": "ORG-004-sponsorship-and-residency",
+      "severity": "critical",
+      "description": "Preserve the exact residency and sponsorship restrictions.",
+      "expected_behavior": "Record both restrictions, do not drop the value No, and do not reinterpret the residency statement as US-citizens-only language.",
+      "evidence_quotes": [
+        "US and PR Residents Only",
+        "VISA Sponsorship:\n\nNo"
+      ]
+    },
+    {
+      "id": "ORG-005-no-invented-experience",
+      "severity": "critical",
+      "description": "Do not invent a numeric experience requirement.",
+      "expected_behavior": "Leave both minimum and maximum years of experience null.",
+      "evidence_quotes": [
+        "Required Experience and Skills"
+      ]
+    },
+    {
+      "id": "ORG-006-placeholder-salary",
+      "severity": "major",
+      "description": "Do not treat the zero-dollar range as meaningful compensation.",
+      "expected_behavior": "Leave normalized salary blank and warn that the displayed range appears to be a placeholder.",
+      "evidence_quotes": [
+        "$0.00 - $0.00"
+      ]
+    },
+    {
+      "id": "ORG-007-employment-detail-preservation",
+      "severity": "major",
+      "description": "Preserve co-op, full-time, and fixed-term details even though the current model has one employment-type field.",
+      "expected_behavior": "Map the current model field to internship and retain co-op, full-time, and fixed-term facts as supplemental context.",
+      "evidence_quotes": [
+        "Full time Intern/Co-op (Fixed Term)",
+        "Intern/Co-op (Fixed Term)"
+      ]
+    },
+    {
+      "id": "ORG-008-original-listing-preservation",
+      "severity": "critical",
+      "description": "Preserve the complete source listing for human review.",
+      "expected_behavior": "The description presented for review must contain the full substantive listing rather than an AI summary.",
+      "evidence_quotes": [
+        "Requisition ID:R540092"
+      ]
+    }
+  ],
+  "known_traps": [
+    {
+      "id": "ORG-TRAP-001",
+      "description": "The phrase Required Experience and Skills is a section title, not evidence of a numeric experience minimum.",
+      "forbidden_interpretations": [
+        "One or more years of experience required",
+        "Prior medical-device experience required"
+      ]
+    },
+    {
+      "id": "ORG-TRAP-002",
+      "description": "The preferred sentence contains both CAD/SolidWorks and Instron experience.",
+      "forbidden_interpretations": [
+        "SolidWorks is required",
+        "Instron experience is required"
+      ]
+    },
+    {
+      "id": "ORG-TRAP-003",
+      "description": "The zero-dollar salary range appears to be a publishing placeholder.",
+      "forbidden_interpretations": [
+        "The role is unpaid",
+        "The annual salary is zero dollars"
+      ]
+    },
+    {
+      "id": "ORG-TRAP-004",
+      "description": "US and PR Residents Only is ambiguous and must not be silently rewritten.",
+      "forbidden_interpretations": [
+        "US citizens only",
+        "Permanent residents only",
+        "Puerto Rico residents only"
+      ]
+    },
+    {
+      "id": "ORG-TRAP-005",
+      "description": "Equal-opportunity and search-firm boilerplate are not candidate qualifications.",
+      "forbidden_interpretations": [
+        "EEOC knowledge required",
+        "Search-firm agreement required",
+        "Protected-class status is a job requirement"
+      ]
+    },
+    {
+      "id": "ORG-TRAP-006",
+      "description": "OFTP is unexplained listing text and should not become a skill or certification.",
+      "forbidden_interpretations": [
+        "OFTP certification required",
+        "OFTP is a technical skill"
+      ]
+    }
+  ]
+}
