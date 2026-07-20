@@ -120,7 +120,8 @@
     grid-column: span 2;
 }
 
-.intake-raw-preview summary {
+.intake-raw-preview summary,
+.intake-attempt-details summary {
     cursor: pointer;
     font-weight: 800;
     letter-spacing: 0.06em;
@@ -135,6 +136,58 @@
     white-space: pre-wrap;
     font-family: inherit;
     background: rgba(255, 255, 255, 0.65);
+}
+
+.intake-orchestration-alert {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.intake-orchestration-alert > strong {
+    padding: 0.55rem 0.7rem;
+    border: 2px solid var(--ink, #171b22);
+    white-space: nowrap;
+}
+
+.intake-orchestration-fallback {
+    background: rgba(200, 255, 53, 0.34);
+}
+
+.intake-orchestration-manual {
+    background: rgba(255, 103, 94, 0.28);
+}
+
+.intake-attempt-details {
+    margin-bottom: 1rem;
+}
+
+.intake-attempt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.8rem;
+    margin-top: 1rem;
+}
+
+.intake-attempt-grid article {
+    padding: 0.8rem;
+    border: 2px solid var(--ink, #171b22);
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.intake-attempt-grid span,
+.intake-attempt-grid small {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.intake-attempt-grid strong {
+    display: block;
+    margin: 0.35rem 0;
 }
 
 .intake-discard-form {
@@ -165,8 +218,14 @@
 
     .intake-evidence-panel,
     .intake-final-actions,
-    .intake-section-heading {
+    .intake-section-heading,
+    .intake-orchestration-alert {
         display: block;
+    }
+
+    .intake-orchestration-alert > strong {
+        display: inline-block;
+        margin-top: 0.8rem;
     }
 
     .intake-boundary-card {
