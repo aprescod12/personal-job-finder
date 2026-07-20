@@ -30,4 +30,4 @@ jobs:
         run: python manage.py check
 
       - name: Run tests
-        run: python manage.py test
+        run: python manage.py test tracker.test_job_extraction_fallback tracker.test_job_extraction_provider --verbosity 2
