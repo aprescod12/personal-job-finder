@@ -277,7 +277,7 @@ class ExtractionCoordinatorViewTests(TestCase):
         draft = self.client.session[INTAKE_SESSION_KEY]
         extraction = draft["extraction"]
         self.assertTrue(extraction["orchestration"]["manual_review_required"])
-        self.assertEqual(extraction["job"]["description"], SIMPLE_LISTING)
+        self.assertEqual(extraction["job"]["description"], SIMPLE_LISTING.strip())
         self.assertEqual(JobPosting.objects.count(), 0)
 
         review = self.client.get(reverse("job_intake_review"))
