@@ -3,7 +3,8 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from .intake_forms import JobIntakePasteForm, JobIntakeReviewForm
-from .services.job_extraction import JobExtractionError, extract_job
+from .services.job_extraction import JobExtractionError
+from .services.job_extraction_coordinator import extract_job_with_fallback
 
 
 INTAKE_SESSION_KEY = "stage4_job_intake_draft"
@@ -18,7 +19,7 @@ def job_intake_start(request):
             source_label = form.cleaned_data.get("source_label", "")
 
             try:
-                extraction = extract_job(
+                extraction = extract_job_with_fallback(
                     raw_text,
                     source_url=source_url,
                     source_label=source_label,
@@ -27,8 +28,8 @@ def job_intake_start(request):
                 form.add_error(
                     None,
                     (
-                        "The job draft could not be extracted. "
-                        f"Review the extractor configuration and try again. {exc}"
+                        "The job draft could not be prepared safely. "
+                        f"Review the listing and try again. {exc}"
                     ),
                 )
             else:
@@ -39,13 +40,32 @@ def job_intake_start(request):
                     "extraction": extraction,
                 }
                 request.session.modified = True
-                messages.info(
-                    request,
-                    (
-                        "Draft extracted. Review every field before creating "
-                        "the tracked job."
-                    ),
-                )
+
+                orchestration = extraction.get("orchestration", {})
+                if orchestration.get("manual_review_required"):
+                    messages.warning(
+                        request,
+                        (
+                            "No extractor produced a structured draft. The original "
+                            "listing was preserved for manual review; nothing was saved."
+                        ),
+                    )
+                elif orchestration.get("fallback_used"):
+                    messages.warning(
+                        request,
+                        (
+                            "The primary extractor was unavailable. A clearly labeled "
+                            "deterministic fallback draft is ready for careful review."
+                        ),
+                    )
+                else:
+                    messages.info(
+                        request,
+                        (
+                            "Draft extracted. Review every field before creating "
+                            "the tracked job."
+                        ),
+                    )
                 return redirect("job_intake_review")
     else:
         form = JobIntakePasteForm()
