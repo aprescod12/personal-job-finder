@@ -109,6 +109,17 @@ JOB_INTAKE_EXTRACTOR = os.getenv(
 # must also be enabled deliberately before a live model request can occur.
 JOB_INTAKE_AI_ENABLED = _env_bool("JOB_INTAKE_AI_ENABLED", default=False)
 
+# Step 3C fallback remains local and deterministic. It is disclosed visibly on
+# the review page whenever the primary extractor cannot produce a safe draft.
+JOB_INTAKE_FALLBACK_ENABLED = _env_bool(
+    "JOB_INTAKE_FALLBACK_ENABLED",
+    default=True,
+)
+JOB_INTAKE_FALLBACK_EXTRACTOR = os.getenv(
+    "JOB_INTAKE_FALLBACK_EXTRACTOR",
+    "tracker.services.job_intake.DeterministicJobExtractor",
+).strip()
+
 # Non-secret request configuration. The API key is intentionally read directly
 # from the process environment by the backend only when a request is made.
 OPENAI_JOB_EXTRACTION_MODEL = (
