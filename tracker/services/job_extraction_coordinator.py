@@ -196,7 +196,11 @@ def extract_job_with_fallback(
         )
         return primary_payload
 
-    same_configured_provider = primary_path == fallback_path
+    same_configured_provider = (
+        primary_extractor is None
+        and fallback_extractor is None
+        and primary_path == fallback_path
+    )
     same_injected_provider = (
         loaded_primary is not None
         and fallback_extractor is not None
