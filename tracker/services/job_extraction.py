@@ -9,6 +9,17 @@ from django.utils.module_loading import import_string
 
 DEFAULT_EXTRACTOR_PATH = "tracker.services.job_intake.DeterministicJobExtractor"
 
+ERROR_CONFIGURATION = "configuration"
+ERROR_AUTHENTICATION = "authentication"
+ERROR_PERMISSION = "permission"
+ERROR_USAGE_LIMIT = "usage_limit"
+ERROR_TIMEOUT = "timeout"
+ERROR_CONNECTION = "connection"
+ERROR_INVALID_RESPONSE = "invalid_response"
+ERROR_REFUSAL = "refusal"
+ERROR_PROVIDER_FAILURE = "provider_failure"
+ERROR_ALL_EXTRACTORS_FAILED = "all_extractors_failed"
+
 JOB_FIELD_DEFAULTS = {
     "title": "",
     "company": "",
@@ -44,6 +55,17 @@ REQUIREMENT_FIELD_DEFAULTS = {
 class JobExtractionError(RuntimeError):
     """Raised when a configured extraction provider cannot produce a safe draft."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        category: str = ERROR_PROVIDER_FAILURE,
+        retryable: bool = False,
+    ):
+        super().__init__(message)
+        self.category = category
+        self.retryable = retryable
+
 
 @dataclass(frozen=True, slots=True)
 class JobExtractionRequest:
@@ -53,7 +75,10 @@ class JobExtractionRequest:
 
     def __post_init__(self):
         if not self.listing_text or not self.listing_text.strip():
-            raise JobExtractionError("Listing text is required for extraction.")
+            raise JobExtractionError(
+                "Listing text is required for extraction.",
+                category=ERROR_CONFIGURATION,
+            )
 
 
 @dataclass(slots=True)
@@ -90,7 +115,8 @@ class JobExtractionResult:
             json.dumps(payload)
         except (TypeError, ValueError) as exc:
             raise JobExtractionError(
-                "The extraction provider returned data that cannot be stored safely."
+                "The extraction provider returned data that cannot be stored safely.",
+                category=ERROR_INVALID_RESPONSE,
             ) from exc
 
         return payload
@@ -139,22 +165,42 @@ def get_job_extractor(extractor_path: str | None = None) -> BaseJobExtractor:
         extractor_class = import_string(path)
     except (ImportError, AttributeError, ValueError) as exc:
         raise JobExtractionError(
-            f"The configured job extractor could not be loaded: {path}."
+            f"The configured job extractor could not be loaded: {path}.",
+            category=ERROR_CONFIGURATION,
         ) from exc
 
     try:
         extractor = extractor_class()
+    except JobExtractionError:
+        raise
     except TypeError as exc:
         raise JobExtractionError(
-            f"The configured job extractor could not be initialized: {path}."
+            f"The configured job extractor could not be initialized: {path}.",
+            category=ERROR_CONFIGURATION,
         ) from exc
 
     if not isinstance(extractor, BaseJobExtractor):
         raise JobExtractionError(
-            "The configured job extractor must implement BaseJobExtractor."
+            "The configured job extractor must implement BaseJobExtractor.",
+            category=ERROR_CONFIGURATION,
         )
 
     return extractor
+
+
+def execute_job_extractor(
+    request: JobExtractionRequest,
+    extractor: BaseJobExtractor,
+) -> JobExtractionResult:
+    result = extractor.extract(request)
+
+    if not isinstance(result, JobExtractionResult):
+        raise JobExtractionError(
+            "The extraction provider did not return a JobExtractionResult.",
+            category=ERROR_INVALID_RESPONSE,
+        )
+
+    return result
 
 
 def extract_job(
@@ -170,11 +216,5 @@ def extract_job(
         source_label=source_label,
     )
     active_extractor = extractor or get_job_extractor()
-    result = active_extractor.extract(request)
-
-    if not isinstance(result, JobExtractionResult):
-        raise JobExtractionError(
-            "The extraction provider did not return a JobExtractionResult."
-        )
-
+    result = execute_job_extractor(request, active_extractor)
     return result.to_dict()
