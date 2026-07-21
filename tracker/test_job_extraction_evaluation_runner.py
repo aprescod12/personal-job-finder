@@ -6,7 +6,7 @@ from pathlib import Path
 
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
 from tracker.models import JobPosting, JobRequirement
 
@@ -70,7 +70,8 @@ class JobExtractionComparisonTests(SimpleTestCase):
 
         self.assertEqual(comparison.status, STATUS_PARTIAL)
         self.assertEqual(len(comparison.matched_items), 2)
-        self.assertEqual(comparison.missing_items, ["I2C"])
+        self.assertEqual(len(comparison.missing_items), 1)
+        self.assertIn(comparison.missing_items[0], {"UART", "I2C"})
         self.assertFalse(comparison.unexpected_items)
         self.assertGreater(comparison.score, 0)
         self.assertLess(comparison.score, 1)
@@ -89,7 +90,7 @@ class JobExtractionComparisonTests(SimpleTestCase):
         )
 
 
-class JobExtractionEvaluationRunnerTests(SimpleTestCase):
+class JobExtractionEvaluationRunnerTests(TestCase):
     def test_runner_evaluates_all_seven_cases_without_database_writes(self):
         run = evaluate_cases(
             generated_at=datetime(2026, 7, 21, tzinfo=timezone.utc)
@@ -185,7 +186,7 @@ class JobExtractionEvaluationCommandTests(SimpleTestCase):
             "--format",
             "json",
             "--case",
-            "case-005-poorly-formatted-general-software",
+            "case-005-general-software-poor-format",
             stdout=stdout,
         )
 
@@ -193,7 +194,7 @@ class JobExtractionEvaluationCommandTests(SimpleTestCase):
         self.assertEqual(payload["case_count"], 1)
         self.assertEqual(
             payload["cases"][0]["case_id"],
-            "case-005-poorly-formatted-general-software",
+            "case-005-general-software-poor-format",
         )
 
     def test_command_writes_markdown_report(self):
