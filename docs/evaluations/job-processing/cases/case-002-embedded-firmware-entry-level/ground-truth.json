@@ -1,0 +1,88 @@
+{
+  "schema_version": "job-extraction-evaluation-case-v1",
+  "case_id": "case-002-embedded-firmware-entry-level",
+  "title": "Embedded Firmware Entry-Level Synthetic Case",
+  "role_category": "embedded-firmware-entry-level",
+  "source": {
+    "company": "Northstar Medical Systems",
+    "requisition_id": "SYN-EMB-002",
+    "captured_date": "2026-07-20",
+    "listing_file": "listing.txt",
+    "notes_file": "notes.md",
+    "source_url": ""
+  },
+  "expected": {
+    "job": {
+      "title": "Junior Embedded Firmware Engineer",
+      "company": "Northstar Medical Systems",
+      "location": "Minneapolis, Minnesota",
+      "employment_type": "full_time",
+      "work_arrangement": "hybrid",
+      "salary_text": "",
+      "date_posted": null,
+      "deadline_status": "confirmed",
+      "application_deadline": "2026-08-15"
+    },
+    "requirements": {
+      "role_family": "Embedded Firmware Engineering",
+      "seniority_level": "entry_level",
+      "industry_tags": ["Medical devices", "Wearable health technology", "Patient monitoring"],
+      "required_skills": ["C programming", "Microcontroller fundamentals", "UART", "I2C", "SPI", "Git", "Unit testing", "Hardware-software integration"],
+      "preferred_skills": ["RTOS", "Bluetooth Low Energy", "Medical-device development", "IEC 62304 familiarity"],
+      "required_education": ["Bachelor's degree in Electrical Engineering, Computer Engineering, Computer Science, or a related field, completed or expected by the start date"],
+      "preferred_education": [],
+      "minimum_years_experience": 0,
+      "maximum_years_experience": 2,
+      "responsibilities": ["Develop and debug embedded C firmware", "Implement and test device interfaces", "Write unit tests", "Support hardware-software integration", "Review code and document design decisions", "Collaborate with electrical, systems, and verification engineers"],
+      "certifications": [],
+      "work_authorization_requirements": ["Authorized to work in the United States", "Immigration sponsorship unavailable now or in the future"],
+      "hard_disqualifiers": ["Immigration sponsorship unavailable"],
+      "requirement_notes": "The degree may be completed by the start date; relocation is available and travel is under 10 percent."
+    },
+    "supplemental": {
+      "employment_category": "full_time",
+      "schedule": "full_time",
+      "employment_term": "permanent",
+      "requisition_id": "SYN-EMB-002",
+      "openings": 2,
+      "relocation": "available",
+      "travel": "less_than_10_percent",
+      "driving_license_required": false
+    }
+  },
+  "critical_checks": [
+    {
+      "id": "EMB-001-required-preferred",
+      "severity": "critical",
+      "description": "Keep RTOS, Bluetooth, medical-device development, and IEC 62304 in the preferred category.",
+      "expected_behavior": "Do not promote preferred qualifications into required skills.",
+      "evidence_quotes": ["Preferred qualifications"]
+    },
+    {
+      "id": "EMB-002-experience-range",
+      "severity": "critical",
+      "description": "Extract the explicitly bounded zero-to-two-year experience range.",
+      "expected_behavior": "Set minimum years to 0 and maximum years to 2.",
+      "evidence_quotes": ["Zero to two years of internship, project, or professional experience."]
+    },
+    {
+      "id": "EMB-003-deadline-and-sponsorship",
+      "severity": "critical",
+      "description": "Normalize the deadline and preserve the no-sponsorship rule.",
+      "expected_behavior": "Return deadline 2026-08-15 and record sponsorship unavailable without inventing citizenship language.",
+      "evidence_quotes": ["Applications close August 15, 2026.", "We are unable to provide immigration sponsorship now or in the future."]
+    }
+  ],
+  "known_traps": [
+    {
+      "id": "EMB-TRAP-001",
+      "description": "Expected degree completion by the start date is not the same as a degree already completed when applying.",
+      "forbidden_interpretations": ["Completed bachelor's degree required at application time"]
+    },
+    {
+      "id": "EMB-TRAP-002",
+      "description": "IEC 62304 appears only under preferred qualifications.",
+      "forbidden_interpretations": ["IEC 62304 certification required", "IEC 62304 experience required"]
+    }
+  ]
+}
