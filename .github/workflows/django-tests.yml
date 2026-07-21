@@ -32,5 +32,18 @@ jobs:
       - name: Validate extraction evaluation cases
         run: python manage.py validate_job_extraction_cases
 
+      - name: Run deterministic extraction evaluation
+        run: |
+          python manage.py evaluate_job_extraction --format markdown --output /tmp/deterministic-baseline.md
+          python manage.py evaluate_job_extraction --format json --output /tmp/deterministic-baseline.json
+
+      - name: Upload temporary evaluation baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: deterministic-extraction-baseline
+          path: |
+            /tmp/deterministic-baseline.md
+            /tmp/deterministic-baseline.json
+
       - name: Run tests
         run: python manage.py test
