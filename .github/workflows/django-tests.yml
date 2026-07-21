@@ -29,5 +29,8 @@ jobs:
       - name: Run Django system checks
         run: python manage.py check
 
+      - name: Validate extraction evaluation cases
+        run: python manage.py validate_job_extraction_cases
+
       - name: Run tests
         run: python manage.py test
