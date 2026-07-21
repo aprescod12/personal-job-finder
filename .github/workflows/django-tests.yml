@@ -29,21 +29,11 @@ jobs:
       - name: Run Django system checks
         run: python manage.py check
 
-      - name: Validate extraction evaluation cases
+      - name: Validate evaluation cases
         run: python manage.py validate_job_extraction_cases
 
-      - name: Run deterministic extraction evaluation
-        run: python manage.py evaluate_job_extraction --format json --output /tmp/deterministic-baseline.json
+      - name: Run offline evaluation
+        run: python manage.py evaluate_job_extraction --format json --output /tmp/evaluation.json
 
-      - name: Run evaluation tests with diagnostics
-        shell: bash
-        run: |
-          set -o pipefail
-          python manage.py test tracker.test_job_extraction_evaluation_runner -v 2 2>&1 | tee /tmp/evaluation-tests.log
-
-      - name: Upload evaluation test diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: evaluation-test-diagnostics
-          path: /tmp/evaluation-tests.log
+      - name: Run tests
+        run: python manage.py test
