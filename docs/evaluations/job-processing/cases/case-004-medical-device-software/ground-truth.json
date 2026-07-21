@@ -1,0 +1,88 @@
+{
+  "schema_version": "job-extraction-evaluation-case-v1",
+  "case_id": "case-004-medical-device-software",
+  "title": "Medical-Device Software Engineer Synthetic Case",
+  "role_category": "medical-device-software-entry-level",
+  "source": {
+    "company": "HarborPoint Health Tech",
+    "requisition_id": "SYN-SWMD-004",
+    "captured_date": "2026-07-20",
+    "listing_file": "listing.txt",
+    "notes_file": "notes.md",
+    "source_url": ""
+  },
+  "expected": {
+    "job": {
+      "title": "Software Engineer I — Connected Medical Devices",
+      "company": "HarborPoint Health Tech",
+      "location": "Boston, Massachusetts",
+      "employment_type": "full_time",
+      "work_arrangement": "remote",
+      "salary_text": "",
+      "date_posted": null,
+      "deadline_status": "not_stated",
+      "application_deadline": null
+    },
+    "requirements": {
+      "role_family": "Medical Device Software Engineering",
+      "seniority_level": "early_career",
+      "industry_tags": ["Medical devices", "Healthcare software", "Connected health", "Home health"],
+      "required_skills": ["Python", "REST APIs", "SQL", "Automated testing", "Git", "Unit testing", "Integration testing", "Data-quality monitoring", "Code review"],
+      "preferred_skills": ["Django", "FastAPI", "AWS", "Connected-device experience", "Healthcare-software experience", "IEC 62304 familiarity"],
+      "required_education": ["Bachelor's degree in Computer Science, Electrical Engineering, Biomedical Engineering, or a related technical field"],
+      "preferred_education": [],
+      "minimum_years_experience": 2,
+      "maximum_years_experience": null,
+      "responsibilities": ["Develop Python services and REST APIs", "Write unit and integration tests", "Design SQL queries", "Support data-quality monitoring", "Participate in code reviews", "Support incident follow-up", "Collaborate with cybersecurity, device, and clinical teams"],
+      "certifications": [],
+      "work_authorization_requirements": ["Currently authorized to work in the United States through the anticipated start date"],
+      "hard_disqualifiers": [],
+      "requirement_notes": "Future sponsorship availability is not stated and must not be inferred. Quarterly Boston meetings are required despite the remote arrangement."
+    },
+    "supplemental": {
+      "employment_category": "full_time",
+      "schedule": "full_time",
+      "employment_term": "permanent",
+      "requisition_id": "SYN-SWMD-004",
+      "openings": 1,
+      "relocation": "",
+      "travel": "quarterly_team_meetings",
+      "driving_license_required": false
+    }
+  },
+  "critical_checks": [
+    {
+      "id": "SWMD-001-experience",
+      "severity": "critical",
+      "description": "Extract the two-year minimum while preserving the academic-project allowance.",
+      "expected_behavior": "Set minimum years to 2 and retain that substantial academic projects may be considered.",
+      "evidence_quotes": ["Two or more years of software-development experience. Substantial academic projects may be considered."]
+    },
+    {
+      "id": "SWMD-002-remote-location",
+      "severity": "major",
+      "description": "Preserve remote work and the Boston meeting condition.",
+      "expected_behavior": "Classify the arrangement as remote without erasing quarterly Boston meetings.",
+      "evidence_quotes": ["Remote within the United States; quarterly team meetings in Boston"]
+    },
+    {
+      "id": "SWMD-003-sponsorship-unknown",
+      "severity": "critical",
+      "description": "Do not convert current authorization language into a no-sponsorship rule.",
+      "expected_behavior": "Record current authorization through the start date and leave hard disqualifiers empty.",
+      "evidence_quotes": ["The posting does not state whether future sponsorship is available."]
+    }
+  ],
+  "known_traps": [
+    {
+      "id": "SWMD-TRAP-001",
+      "description": "Current work authorization through the start date does not answer future sponsorship.",
+      "forbidden_interpretations": ["Visa sponsorship is unavailable", "US citizenship required"]
+    },
+    {
+      "id": "SWMD-TRAP-002",
+      "description": "Remote work does not eliminate the quarterly in-person condition.",
+      "forbidden_interpretations": ["Fully remote with no travel or onsite attendance"]
+    }
+  ]
+}
