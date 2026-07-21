@@ -17,6 +17,15 @@ from .services.job_extraction_evaluation import (
 
 
 CASE_ID = "case-001-organon-medical-device-coop"
+EXPECTED_CASE_IDS = {
+    CASE_ID,
+    "case-002-embedded-firmware-entry-level",
+    "case-003-quality-validation-engineer",
+    "case-004-medical-device-software",
+    "case-005-general-software-poor-format",
+    "case-006-ambiguous-sponsorship",
+    "case-007-citizenship-clearance",
+}
 
 
 class JobExtractionEvaluationCaseTests(SimpleTestCase):
@@ -53,9 +62,8 @@ class JobExtractionEvaluationCaseTests(SimpleTestCase):
         self.assertEqual(case.expected_job["company"], "Organon")
         self.assertEqual(case.expected_job["employment_type"], "internship")
         self.assertEqual(case.expected_job["deadline_status"], "not_stated")
-        self.assertEqual(
-            case.expected_requirements["minimum_years_experience"],
-            None,
+        self.assertIsNone(
+            case.expected_requirements["minimum_years_experience"]
         )
         self.assertIn(
             "VISA Sponsorship: No",
@@ -64,10 +72,40 @@ class JobExtractionEvaluationCaseTests(SimpleTestCase):
         self.assertIn("Requisition ID:R540092", case.listing_text)
         self.assertGreaterEqual(len(case.critical_checks), 8)
 
-    def test_discovery_returns_the_organon_case(self):
+    def test_discovery_returns_the_complete_initial_dataset(self):
         cases = discover_evaluation_cases()
+        case_ids = {case.case_id for case in cases}
 
-        self.assertIn(CASE_ID, [case.case_id for case in cases])
+        self.assertEqual(case_ids, EXPECTED_CASE_IDS)
+        self.assertEqual(len(cases), 7)
+
+    def test_dataset_preserves_authorization_contrasts(self):
+        cases = {case.case_id: case for case in discover_evaluation_cases()}
+
+        no_policy = cases["case-003-quality-validation-engineer"]
+        ambiguous = cases["case-006-ambiguous-sponsorship"]
+        explicit = cases["case-007-citizenship-clearance"]
+
+        self.assertEqual(
+            no_policy.expected_requirements["work_authorization_requirements"],
+            [],
+        )
+        self.assertEqual(
+            ambiguous.expected_requirements["hard_disqualifiers"],
+            [],
+        )
+        self.assertIn(
+            "Sponsorship decisions are case by case and not guaranteed",
+            ambiguous.expected_requirements["work_authorization_requirements"],
+        )
+        self.assertIn(
+            "United States citizenship required",
+            explicit.expected_requirements["hard_disqualifiers"],
+        )
+        self.assertIn(
+            "Visa sponsorship unavailable",
+            explicit.expected_requirements["hard_disqualifiers"],
+        )
 
     def test_management_command_validates_the_case_library(self):
         stdout = StringIO()
@@ -76,7 +114,7 @@ class JobExtractionEvaluationCaseTests(SimpleTestCase):
 
         output = stdout.getvalue()
         self.assertIn(CASE_ID, output)
-        self.assertIn("Validated 1 job extraction evaluation case(s).", output)
+        self.assertIn("Validated 7 job extraction evaluation case(s).", output)
 
     def test_evidence_quote_must_exist_in_the_source_listing(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
