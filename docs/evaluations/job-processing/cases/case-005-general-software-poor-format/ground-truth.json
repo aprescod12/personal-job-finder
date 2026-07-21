@@ -1,0 +1,88 @@
+{
+  "schema_version": "job-extraction-evaluation-case-v1",
+  "case_id": "case-005-general-software-poor-format",
+  "title": "Poorly Formatted General Software Synthetic Case",
+  "role_category": "general-software-contract",
+  "source": {
+    "company": "Atlas Route",
+    "requisition_id": "SYN-GSW-005",
+    "captured_date": "2026-07-20",
+    "listing_file": "listing.txt",
+    "notes_file": "notes.md",
+    "source_url": ""
+  },
+  "expected": {
+    "job": {
+      "title": "Cloud App Developer",
+      "company": "Atlas Route",
+      "location": "U.S. time zones",
+      "employment_type": "contract",
+      "work_arrangement": "remote",
+      "salary_text": "",
+      "date_posted": null,
+      "deadline_status": "confirmed",
+      "application_deadline": "2026-09-01"
+    },
+    "requirements": {
+      "role_family": "Web Application Development",
+      "seniority_level": "mid_level",
+      "industry_tags": ["Software", "Route planning", "Cloud applications"],
+      "required_skills": ["JavaScript or TypeScript", "React", "Node.js", "Web application development", "Written communication", "Automated testing", "Pull-request review", "Production troubleshooting"],
+      "preferred_skills": ["Python", "PostgreSQL", "Docker"],
+      "required_education": [],
+      "preferred_education": [],
+      "minimum_years_experience": 3,
+      "maximum_years_experience": null,
+      "responsibilities": ["Build dashboards and route-planning tools", "Develop React interfaces", "Maintain Node.js APIs", "Write tests", "Review pull requests", "Troubleshoot production issues", "Collaborate with product and customer support"],
+      "certifications": [],
+      "work_authorization_requirements": [],
+      "hard_disqualifiers": [],
+      "requirement_notes": "A degree is explicitly not required. The role requires reliable overlap from noon to 4 p.m. Eastern."
+    },
+    "supplemental": {
+      "employment_category": "contract",
+      "schedule": "part_time",
+      "employment_term": "six_months",
+      "requisition_id": "SYN-GSW-005",
+      "openings": 1,
+      "relocation": "not_applicable",
+      "travel": "",
+      "driving_license_required": false
+    }
+  },
+  "critical_checks": [
+    {
+      "id": "GSW-001-poor-format-identity",
+      "severity": "critical",
+      "description": "Recover title, company, remote arrangement, and contract type from compressed text.",
+      "expected_behavior": "Extract Cloud App Developer at Atlas Route as a remote six-month contract.",
+      "evidence_quotes": ["ATLAS ROUTE / cloud app developer / remote — U.S. time zones"]
+    },
+    {
+      "id": "GSW-002-deadline-and-degree",
+      "severity": "critical",
+      "description": "Normalize the short-form deadline and preserve the absence of a degree requirement.",
+      "expected_behavior": "Return deadline 2026-09-01 and leave education requirements empty.",
+      "evidence_quotes": ["apply by 9/1/2026", "degree not required"]
+    },
+    {
+      "id": "GSW-003-auth-silence",
+      "severity": "critical",
+      "description": "Do not infer authorization restrictions from a U.S.-time-zone condition.",
+      "expected_behavior": "Leave work authorization and hard disqualifiers empty.",
+      "evidence_quotes": ["The listing contains no statement about work authorization, citizenship, clearance, or visa sponsorship."]
+    }
+  ],
+  "known_traps": [
+    {
+      "id": "GSW-TRAP-001",
+      "description": "U.S. time zones is a scheduling and location constraint, not proof of work authorization.",
+      "forbidden_interpretations": ["Must be authorized to work in the United States", "US residents only"]
+    },
+    {
+      "id": "GSW-TRAP-002",
+      "description": "Culture and equal-opportunity boilerplate are not technical qualifications.",
+      "forbidden_interpretations": ["Kindness is a required skill", "Benefits are provided to the contractor"]
+    }
+  ]
+}
