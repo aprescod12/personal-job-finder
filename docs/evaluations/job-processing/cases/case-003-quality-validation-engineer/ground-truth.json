@@ -1,0 +1,88 @@
+{
+  "schema_version": "job-extraction-evaluation-case-v1",
+  "case_id": "case-003-quality-validation-engineer",
+  "title": "Quality Validation Engineer Synthetic Case",
+  "role_category": "quality-validation-entry-level",
+  "source": {
+    "company": "Meridian Diagnostics Lab",
+    "requisition_id": "SYN-QV-003",
+    "captured_date": "2026-07-20",
+    "listing_file": "listing.txt",
+    "notes_file": "notes.md",
+    "source_url": ""
+  },
+  "expected": {
+    "job": {
+      "title": "Quality Validation Engineer I",
+      "company": "Meridian Diagnostics Lab",
+      "location": "Raleigh, North Carolina",
+      "employment_type": "full_time",
+      "work_arrangement": "onsite",
+      "salary_text": "",
+      "date_posted": "2026-07-08",
+      "deadline_status": "rolling",
+      "application_deadline": null
+    },
+    "requirements": {
+      "role_family": "Quality and Validation Engineering",
+      "seniority_level": "entry_level",
+      "industry_tags": ["Diagnostics", "Medical devices", "Laboratory equipment", "Quality assurance"],
+      "required_skills": ["Validation protocols", "Deviation investigation", "Root-cause analysis", "Validation data analysis", "Technical writing", "Controlled documentation", "Basic statistical analysis", "Attention to detail", "Change control"],
+      "preferred_skills": ["ISO 13485 familiarity", "FDA 21 CFR Part 820 familiarity", "Minitab", "Laboratory equipment validation"],
+      "required_education": ["Bachelor's degree in engineering, biology, chemistry, or another relevant scientific discipline"],
+      "preferred_education": [],
+      "minimum_years_experience": 1,
+      "maximum_years_experience": null,
+      "responsibilities": ["Draft and execute qualification protocols", "Investigate deviations", "Support root-cause analysis", "Analyze validation data", "Prepare final reports", "Maintain controlled records", "Support change control", "Partner with cross-functional teams"],
+      "certifications": [],
+      "work_authorization_requirements": [],
+      "hard_disqualifiers": [],
+      "requirement_notes": "The one-year requirement may be satisfied by quality, validation, laboratory, internship, or co-op experience. No certification is required."
+    },
+    "supplemental": {
+      "employment_category": "full_time",
+      "schedule": "full_time",
+      "employment_term": "permanent",
+      "requisition_id": "SYN-QV-003",
+      "openings": 1,
+      "relocation": "",
+      "travel": "",
+      "driving_license_required": false
+    }
+  },
+  "critical_checks": [
+    {
+      "id": "QV-001-rolling-deadline",
+      "severity": "critical",
+      "description": "Recognize rolling review without inventing a calendar deadline.",
+      "expected_behavior": "Set deadline status to rolling and leave application deadline null.",
+      "evidence_quotes": ["Applications are reviewed on a rolling basis until the position is filled."]
+    },
+    {
+      "id": "QV-002-experience",
+      "severity": "critical",
+      "description": "Capture the one-year minimum and the allowed experience forms.",
+      "expected_behavior": "Set minimum years to 1 and do not require professional-only validation experience.",
+      "evidence_quotes": ["One year of quality, validation, laboratory, internship, or co-op experience."]
+    },
+    {
+      "id": "QV-003-standards-and-auth",
+      "severity": "critical",
+      "description": "Keep standards preferred and avoid inventing authorization restrictions.",
+      "expected_behavior": "Treat ISO 13485 and FDA 21 CFR Part 820 as preferred familiarity, leave certifications and authorization restrictions empty.",
+      "evidence_quotes": ["Familiarity with ISO 13485 and FDA 21 CFR Part 820.", "Work authorization and sponsorship are not addressed in this posting."]
+    }
+  ],
+  "known_traps": [
+    {
+      "id": "QV-TRAP-001",
+      "description": "Standards familiarity is preferred knowledge, not professional certification.",
+      "forbidden_interpretations": ["ISO 13485 certification required", "FDA certification required"]
+    },
+    {
+      "id": "QV-TRAP-002",
+      "description": "The minimum-qualifications heading does not make preferred items required.",
+      "forbidden_interpretations": ["Minitab is required", "Laboratory equipment validation experience is required"]
+    }
+  ]
+}
