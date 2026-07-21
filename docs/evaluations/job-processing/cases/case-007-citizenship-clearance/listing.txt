@@ -1,0 +1,35 @@
+SYNTHETIC EVALUATION LISTING — NOT A LIVE OPENING
+
+Sentinel Biomedical Defense
+Systems Test Engineer — Defense Medical Technologies
+Aberdeen Proving Ground, Maryland
+On-site | Full-time | Permanent
+Requisition SYN-CLR-007
+Application deadline: October 2, 2026
+
+Mission
+Support verification of deployable physiological monitoring and medical-support systems.
+
+Responsibilities
+- Execute system-level test procedures.
+- Configure sensors, data-acquisition hardware, and environmental test equipment.
+- Document defects and maintain requirements traceability.
+- Support test readiness reviews and formal customer demonstrations.
+- Analyze results and prepare test reports.
+
+Required qualifications
+- Bachelor's degree in Electrical Engineering, Biomedical Engineering, Computer Engineering, or a related field.
+- Zero to two years of engineering, internship, co-op, military, or laboratory experience.
+- Test procedure execution.
+- Requirements traceability.
+- Electronic instrumentation.
+- Technical writing.
+- United States citizenship is required.
+- Must be able to obtain and maintain a Secret security clearance.
+
+Preferred qualifications
+- Existing active Secret clearance.
+- MATLAB or Python.
+- Experience with environmental testing.
+
+Visa sponsorship is not available. Travel may be up to 20 percent. A valid driver's license is required.

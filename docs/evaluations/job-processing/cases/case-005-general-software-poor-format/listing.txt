@@ -1,0 +1,29 @@
+SYNTHETIC EVALUATION LISTING — NOT A LIVE OPENING
+
+ATLAS ROUTE / cloud app developer / remote — U.S. time zones
+6 month contract, about 20 hours each week
+apply by 9/1/2026
+ref SYN-GSW-005
+
+build dashboards + route-planning tools
+you'll: ship React screens; maintain Node.js APIs; write tests; review pull requests; troubleshoot production issues; talk with product + customer support
+
+must have
+JavaScript or TypeScript
+React
+Node.js
+three years building web applications
+clear written communication
+reliable overlap from 12 p.m. to 4 p.m. Eastern
+
+nice
+Python
+PostgreSQL
+Docker
+
+degree not required
+location can be anywhere in U.S. time zones
+equipment provided
+our team values curiosity, kindness, and ownership
+Equal opportunity employer. Benefits language does not apply to this contract.
+The listing contains no statement about work authorization, citizenship, clearance, or visa sponsorship.

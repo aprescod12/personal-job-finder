@@ -1,0 +1,88 @@
+{
+  "schema_version": "job-extraction-evaluation-case-v1",
+  "case_id": "case-006-ambiguous-sponsorship",
+  "title": "Ambiguous Sponsorship Biomedical Test Synthetic Case",
+  "role_category": "biomedical-test-engineering",
+  "source": {
+    "company": "Vector Pulse Medical",
+    "requisition_id": "SYN-BTEST-006",
+    "captured_date": "2026-07-20",
+    "listing_file": "listing.txt",
+    "notes_file": "notes.md",
+    "source_url": ""
+  },
+  "expected": {
+    "job": {
+      "title": "Biomedical Test Engineer",
+      "company": "Vector Pulse Medical",
+      "location": "Newark, Delaware",
+      "employment_type": "full_time",
+      "work_arrangement": "onsite",
+      "salary_text": "",
+      "date_posted": null,
+      "deadline_status": "not_stated",
+      "application_deadline": null
+    },
+    "requirements": {
+      "role_family": "Biomedical Test Engineering",
+      "seniority_level": "early_career",
+      "industry_tags": ["Medical devices", "Patient monitoring", "Verification testing"],
+      "required_skills": ["LabVIEW", "Electronic test equipment", "Technical documentation", "Data analysis", "Verification protocols", "Test fixtures", "Failure analysis"],
+      "preferred_skills": ["FDA design controls", "IEC 60601-1 familiarity", "Python"],
+      "required_education": ["Bachelor's degree in Biomedical Engineering, Electrical Engineering, or a related discipline"],
+      "preferred_education": [],
+      "minimum_years_experience": 1,
+      "maximum_years_experience": 3,
+      "responsibilities": ["Develop verification protocols", "Develop test fixtures", "Operate electronic test equipment", "Automate data collection with LabVIEW", "Analyze failures", "Write verification reports", "Coordinate with design engineering and quality assurance"],
+      "certifications": [],
+      "work_authorization_requirements": ["Able to work in the United States when employment begins", "Sponsorship decisions are case by case and not guaranteed"],
+      "hard_disqualifiers": [],
+      "requirement_notes": "Sponsorship is uncertain rather than categorically unavailable. Travel is up to 5 percent and no driver's license is required."
+    },
+    "supplemental": {
+      "employment_category": "full_time",
+      "schedule": "full_time",
+      "employment_term": "permanent",
+      "requisition_id": "SYN-BTEST-006",
+      "openings": 1,
+      "relocation": "",
+      "travel": "up_to_5_percent",
+      "driving_license_required": false
+    }
+  },
+  "critical_checks": [
+    {
+      "id": "BTEST-001-experience-range",
+      "severity": "critical",
+      "description": "Extract the one-to-three-year range and accepted experience categories.",
+      "expected_behavior": "Set minimum to 1 and maximum to 3 without requiring professional-only experience.",
+      "evidence_quotes": ["One to three years of laboratory, product-test, research, internship, or co-op experience."]
+    },
+    {
+      "id": "BTEST-002-auth-ambiguity",
+      "severity": "critical",
+      "description": "Preserve case-by-case sponsorship language without declaring an automatic blocker.",
+      "expected_behavior": "Record the authorization statements and leave hard disqualifiers empty.",
+      "evidence_quotes": ["Sponsorship decisions are made case by case and are not guaranteed."]
+    },
+    {
+      "id": "BTEST-003-preferred-and-license",
+      "severity": "major",
+      "description": "Keep standards and Python preferred while preserving the explicit no-license requirement.",
+      "expected_behavior": "Do not classify preferred items as required or certifications, and set driving_license_required to false.",
+      "evidence_quotes": ["Preferred qualifications", "A driver's license is not required."]
+    }
+  ],
+  "known_traps": [
+    {
+      "id": "BTEST-TRAP-001",
+      "description": "Not guaranteed sponsorship is not the same as no sponsorship.",
+      "forbidden_interpretations": ["Visa sponsorship unavailable", "Candidate is automatically ineligible if sponsorship may be needed"]
+    },
+    {
+      "id": "BTEST-TRAP-002",
+      "description": "IEC 60601-1 familiarity is preferred knowledge, not certification.",
+      "forbidden_interpretations": ["IEC 60601-1 certification required"]
+    }
+  ]
+}
