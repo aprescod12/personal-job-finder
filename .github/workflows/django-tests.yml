@@ -29,8 +29,11 @@ jobs:
       - name: Run Django system checks
         run: python manage.py check
 
-      - name: Validate extraction evaluation cases
+      - name: Validate evaluation cases
         run: python manage.py validate_job_extraction_cases
+
+      - name: Run offline evaluation
+        run: python manage.py evaluate_job_extraction --format json --output /tmp/evaluation.json
 
       - name: Run tests
         run: python manage.py test
