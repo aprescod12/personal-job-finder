@@ -1,0 +1,36 @@
+SYNTHETIC EVALUATION LISTING — NOT A LIVE OPENING
+
+HarborPoint Health Tech
+Software Engineer I — Connected Medical Devices
+Boston, Massachusetts
+Remote within the United States; quarterly team meetings in Boston
+Full-time
+Job code SYN-SWMD-004
+No application deadline is stated.
+
+About the role
+Build software services that receive and process data from connected home-health devices.
+
+Responsibilities
+- Develop Python services and REST APIs.
+- Write unit and integration tests.
+- Design SQL queries and support data-quality monitoring.
+- Participate in code reviews and incident follow-up.
+- Work with cybersecurity, device, and clinical teams.
+
+Required
+- Bachelor's degree in Computer Science, Electrical Engineering, Biomedical Engineering, or a related technical field.
+- Two or more years of software-development experience. Substantial academic projects may be considered.
+- Python.
+- REST APIs.
+- SQL.
+- Automated testing.
+- Git.
+
+Preferred
+- Django or FastAPI.
+- AWS.
+- Experience with connected devices or healthcare software.
+- Familiarity with IEC 62304.
+
+Candidates must be currently authorized to work in the United States through their anticipated start date. The posting does not state whether future sponsorship is available.
