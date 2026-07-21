@@ -1,0 +1,34 @@
+SYNTHETIC EVALUATION LISTING — NOT A LIVE OPENING
+
+Vector Pulse Medical
+Biomedical Test Engineer
+Newark, Delaware
+On-site, full-time
+Requisition SYN-BTEST-006
+No deadline listed.
+
+Role summary
+Plan and execute bench testing for physiological monitoring equipment.
+
+Key duties
+- Develop verification protocols and test fixtures.
+- Operate oscilloscopes, function generators, data-acquisition systems, and electrical safety analyzers.
+- Automate data collection using LabVIEW.
+- Analyze failures and write verification reports.
+- Coordinate with design engineering and quality assurance.
+
+Required qualifications
+- Bachelor's degree in Biomedical Engineering, Electrical Engineering, or a related discipline.
+- One to three years of laboratory, product-test, research, internship, or co-op experience.
+- LabVIEW.
+- Electronic test equipment.
+- Technical documentation.
+- Data analysis.
+
+Preferred qualifications
+- FDA design controls.
+- IEC 60601-1 familiarity.
+- Python.
+
+Applicants must be able to work in the United States at the time employment begins. Sponsorship decisions are made case by case and are not guaranteed.
+Travel: up to 5 percent. A driver's license is not required.
