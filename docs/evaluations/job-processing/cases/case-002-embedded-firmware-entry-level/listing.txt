@@ -1,0 +1,37 @@
+SYNTHETIC EVALUATION LISTING — NOT A LIVE OPENING
+
+Northstar Medical Systems
+Junior Embedded Firmware Engineer
+Minneapolis, Minnesota
+Hybrid — three days per week on site
+Full-time, permanent
+Requisition: SYN-EMB-002
+Applications close August 15, 2026. Two openings.
+
+Northstar develops wearable patient-monitoring devices used in outpatient care.
+
+What you will do
+- Develop and debug embedded C firmware for ARM-based microcontrollers.
+- Implement and test UART, I2C, and SPI device interfaces.
+- Write unit tests and support hardware-software integration.
+- Review code in Git and document design decisions.
+- Collaborate with electrical, systems, and verification engineers.
+
+Required qualifications
+- Bachelor's degree in Electrical Engineering, Computer Engineering, Computer Science, or a related field, completed or expected by the start date.
+- C programming.
+- Microcontroller fundamentals.
+- Familiarity with UART, I2C, and SPI.
+- Git version control.
+- Zero to two years of internship, project, or professional experience.
+
+Preferred qualifications
+- RTOS experience.
+- Bluetooth Low Energy.
+- Medical-device development.
+- Familiarity with IEC 62304.
+
+Work authorization
+Candidates must be authorized to work in the United States. We are unable to provide immigration sponsorship now or in the future.
+
+Relocation assistance is available. Travel is expected to be less than 10 percent.
