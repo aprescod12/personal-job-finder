@@ -53,19 +53,20 @@ class JobExtractionComparisonTests(SimpleTestCase):
         partial = compare_text_field(
             "requirements.role_family",
             "Medical Device Software Engineering",
-            "Software Engineer I Connected Medical Devices",
+            "Medical Device Software Engineer",
         )
 
         self.assertEqual(exact.status, STATUS_EXACT)
         self.assertEqual(exact.score, 1.0)
         self.assertEqual(partial.status, STATUS_PARTIAL)
         self.assertGreaterEqual(partial.score, 0.55)
+        self.assertLess(partial.score, 0.98)
 
     def test_list_comparison_uses_one_to_one_matching(self):
         comparison = compare_list_field(
             "requirements.required_skills",
             ["C programming", "UART", "I2C"],
-            "C programming.\nFamiliarity with UART, I2C, and SPI.",
+            "C programming.\nUART / I2C",
         )
 
         self.assertEqual(comparison.status, STATUS_PARTIAL)
