@@ -1,0 +1,88 @@
+{
+  "schema_version": "job-extraction-evaluation-case-v1",
+  "case_id": "case-007-citizenship-clearance",
+  "title": "Citizenship and Clearance Systems Test Synthetic Case",
+  "role_category": "defense-medical-systems-test",
+  "source": {
+    "company": "Sentinel Biomedical Defense",
+    "requisition_id": "SYN-CLR-007",
+    "captured_date": "2026-07-20",
+    "listing_file": "listing.txt",
+    "notes_file": "notes.md",
+    "source_url": ""
+  },
+  "expected": {
+    "job": {
+      "title": "Systems Test Engineer — Defense Medical Technologies",
+      "company": "Sentinel Biomedical Defense",
+      "location": "Aberdeen Proving Ground, Maryland",
+      "employment_type": "full_time",
+      "work_arrangement": "onsite",
+      "salary_text": "",
+      "date_posted": null,
+      "deadline_status": "confirmed",
+      "application_deadline": "2026-10-02"
+    },
+    "requirements": {
+      "role_family": "Systems Test Engineering",
+      "seniority_level": "entry_level",
+      "industry_tags": ["Defense", "Medical technology", "Systems engineering", "Verification testing"],
+      "required_skills": ["System-level testing", "Test procedure execution", "Requirements traceability", "Electronic instrumentation", "Technical writing", "Sensor configuration", "Data-acquisition hardware", "Test reporting"],
+      "preferred_skills": ["Active Secret clearance", "MATLAB", "Python", "Environmental testing"],
+      "required_education": ["Bachelor's degree in Electrical Engineering, Biomedical Engineering, Computer Engineering, or a related field"],
+      "preferred_education": [],
+      "minimum_years_experience": 0,
+      "maximum_years_experience": 2,
+      "responsibilities": ["Execute system-level test procedures", "Configure sensors and test equipment", "Document defects", "Maintain requirements traceability", "Support test readiness reviews", "Support customer demonstrations", "Analyze results", "Prepare test reports"],
+      "certifications": [],
+      "work_authorization_requirements": ["United States citizenship required", "Able to obtain and maintain a Secret security clearance", "Visa sponsorship unavailable"],
+      "hard_disqualifiers": ["United States citizenship required", "Ability to obtain and maintain a Secret security clearance required", "Visa sponsorship unavailable"],
+      "requirement_notes": "An existing active Secret clearance is preferred, not required. Travel may reach 20 percent and a driver's license is required."
+    },
+    "supplemental": {
+      "employment_category": "full_time",
+      "schedule": "full_time",
+      "employment_term": "permanent",
+      "requisition_id": "SYN-CLR-007",
+      "openings": 1,
+      "relocation": "",
+      "travel": "up_to_20_percent",
+      "driving_license_required": true
+    }
+  },
+  "critical_checks": [
+    {
+      "id": "CLR-001-citizenship",
+      "severity": "critical",
+      "description": "Preserve the explicit citizenship requirement as a blocker.",
+      "expected_behavior": "Record United States citizenship in both authorization requirements and hard disqualifiers.",
+      "evidence_quotes": ["United States citizenship is required."]
+    },
+    {
+      "id": "CLR-002-clearance",
+      "severity": "critical",
+      "description": "Distinguish ability to obtain clearance from already holding an active clearance.",
+      "expected_behavior": "Require ability to obtain and maintain Secret clearance; keep an existing active clearance preferred.",
+      "evidence_quotes": ["Must be able to obtain and maintain a Secret security clearance.", "Existing active Secret clearance."]
+    },
+    {
+      "id": "CLR-003-sponsorship-and-deadline",
+      "severity": "critical",
+      "description": "Capture the no-sponsorship rule and normalize the deadline.",
+      "expected_behavior": "Record sponsorship unavailable and return deadline 2026-10-02.",
+      "evidence_quotes": ["Visa sponsorship is not available.", "Application deadline: October 2, 2026"]
+    }
+  ],
+  "known_traps": [
+    {
+      "id": "CLR-TRAP-001",
+      "description": "An active clearance is preferred, while eligibility to obtain one is required.",
+      "forbidden_interpretations": ["Active Secret clearance required"]
+    },
+    {
+      "id": "CLR-TRAP-002",
+      "description": "Citizenship language is explicit and should not be softened into generic work authorization.",
+      "forbidden_interpretations": ["Any US work authorization is sufficient", "Permanent residency satisfies the stated citizenship requirement"]
+    }
+  ]
+}
