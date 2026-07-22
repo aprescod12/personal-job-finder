@@ -1,0 +1,32 @@
+{
+  "schema_version": "resume-extraction-evaluation-case-v1",
+  "case_id": "case-002-alternate-headings",
+  "title": "Alternate section headings",
+  "category": "heading_variation",
+  "expected": {
+    "identity": {
+      "full_name": "Jordan Lee",
+      "email": "jordan.lee@example.com",
+      "phone": "",
+      "location": "",
+      "links": ["linkedin.com/in/jordanlee"]
+    },
+    "profile": {
+      "professional_summary": "Biomedical engineering graduate with laboratory and software experience.",
+      "education_headings": ["State University"],
+      "experience_headings": ["Research Assistant"],
+      "project_headings": ["EMG Classification Tool"],
+      "skills": ["Python", "MATLAB", "Git", "Data analysis"],
+      "certification_headings": [],
+      "leadership_headings": ["Biomedical Engineering Society"]
+    }
+  },
+  "critical_claims": [
+    {
+      "path": "profile.experience_headings",
+      "expected_text": "Research Assistant",
+      "source_quote": "Research Assistant"
+    }
+  ],
+  "forbidden_claims": ["Medical doctor", "FDA approval", "C++"]
+}

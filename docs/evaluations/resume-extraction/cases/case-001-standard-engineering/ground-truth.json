@@ -1,0 +1,37 @@
+{
+  "schema_version": "resume-extraction-evaluation-case-v1",
+  "case_id": "case-001-standard-engineering",
+  "title": "Standard engineering resume",
+  "category": "standard_sections",
+  "expected": {
+    "identity": {
+      "full_name": "Amiri Prescod",
+      "email": "amiri@example.com",
+      "phone": "+1 610-555-0100",
+      "location": "",
+      "links": ["github.com/aprescod12"]
+    },
+    "profile": {
+      "professional_summary": "Electrical engineer pursuing graduate study in biomedical engineering.",
+      "education_headings": ["Villanova University"],
+      "experience_headings": ["Engineering Intern"],
+      "project_headings": ["Wearable Sensing Platform"],
+      "skills": ["Python", "MATLAB", "C", "Embedded systems", "Test and validation"],
+      "certification_headings": [],
+      "leadership_headings": ["Student-Athlete"]
+    }
+  },
+  "critical_claims": [
+    {
+      "path": "profile.skills",
+      "expected_text": "Python",
+      "source_quote": "Python, MATLAB, C, Embedded systems, Test and validation"
+    },
+    {
+      "path": "profile.project_headings",
+      "expected_text": "Wearable Sensing Platform",
+      "source_quote": "Wearable Sensing Platform"
+    }
+  ],
+  "forbidden_claims": ["Rust", "FDA certification", "Principal Engineer"]
+}

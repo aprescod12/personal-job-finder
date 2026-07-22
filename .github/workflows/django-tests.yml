@@ -32,8 +32,11 @@ jobs:
       - name: Validate evaluation cases
         run: python manage.py validate_job_extraction_cases
 
-      - name: Run offline evaluation
-        run: python manage.py evaluate_job_extraction --format json --output /tmp/evaluation.json
+      - name: Run offline job evaluation
+        run: python manage.py evaluate_job_extraction --format json --output /tmp/job-evaluation.json
+
+      - name: Run offline resume evaluation
+        run: python manage.py evaluate_resume_extraction --minimum-agreement 60 --output /tmp/resume-evaluation.json
 
       - name: Run tests
         run: python manage.py test

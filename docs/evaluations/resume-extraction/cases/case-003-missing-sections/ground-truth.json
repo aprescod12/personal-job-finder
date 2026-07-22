@@ -1,0 +1,32 @@
+{
+  "schema_version": "resume-extraction-evaluation-case-v1",
+  "case_id": "case-003-missing-sections",
+  "title": "Resume with omitted optional sections",
+  "category": "missing_sections",
+  "expected": {
+    "identity": {
+      "full_name": "Taylor Morgan",
+      "email": "taylor@example.com",
+      "phone": "",
+      "location": "",
+      "links": []
+    },
+    "profile": {
+      "professional_summary": "",
+      "education_headings": ["Technical College"],
+      "experience_headings": ["Electronics Technician Intern"],
+      "project_headings": [],
+      "skills": [],
+      "certification_headings": [],
+      "leadership_headings": []
+    }
+  },
+  "critical_claims": [
+    {
+      "path": "profile.education_headings",
+      "expected_text": "Technical College",
+      "source_quote": "Technical College"
+    }
+  ],
+  "forbidden_claims": ["Python", "Bachelor's degree", "Project Manager", "Six Sigma"]
+}
