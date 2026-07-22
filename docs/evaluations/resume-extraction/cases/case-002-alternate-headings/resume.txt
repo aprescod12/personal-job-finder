@@ -1,0 +1,26 @@
+Jordan Lee
+jordan.lee@example.com | linkedin.com/in/jordanlee
+
+Profile
+Biomedical engineering graduate with laboratory and software experience.
+
+Academic Background
+State University
+B.S. Biomedical Engineering | 2026
+
+Professional Experience
+Research Assistant
+Neural Engineering Laboratory | 2024 - Present
+Processed biosignal data and maintained experiment documentation.
+
+Selected Projects
+EMG Classification Tool
+Python; scikit-learn; signal processing
+Created a classifier for surface EMG recordings.
+
+Core Skills
+Python; MATLAB; Git; Data analysis
+
+Organizations
+Biomedical Engineering Society
+Student Member
