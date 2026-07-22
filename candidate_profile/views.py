@@ -9,11 +9,8 @@ from tracker.models import CareerProfile
 from .forms import ResumeSourceUploadForm
 from .models import ResumeSource
 from .services.resume_documents import ResumeDocumentError, extract_resume_document_text
-from .services.resume_extraction import (
-    ResumeExtractionError,
-    ResumeExtractionRequest,
-    extract_resume,
-)
+from .services.resume_extraction import ResumeExtractionError, ResumeExtractionRequest
+from .services.resume_extraction_coordinator import extract_resume_with_fallback
 
 
 RESUME_EXTRACTION_SESSION_KEY = "stage5_resume_extraction_draft"
@@ -136,7 +133,7 @@ def run_resume_extraction(request, source_id):
             document_parser_key=document.parser_key,
             document_parser_version=document.parser_version,
         )
-        extraction = extract_resume(extraction_request)
+        extraction = extract_resume_with_fallback(extraction_request)
     except (ResumeDocumentError, ResumeExtractionError) as exc:
         messages.error(request, f"Resume extraction could not start: {exc}")
         return redirect("candidate_profile:resume_source_list")
@@ -154,13 +151,33 @@ def run_resume_extraction(request, source_id):
         "created_at": timezone.now().isoformat(),
     }
 
-    messages.success(
-        request,
-        (
-            f"Review draft created from {source.display_label}. "
-            "No career-profile fields or match scores were changed."
-        ),
-    )
+    orchestration = extraction.get("orchestration", {})
+    if orchestration.get("manual_review_required"):
+        messages.warning(
+            request,
+            (
+                f"No extractor produced a structured draft for {source.display_label}. "
+                "The locally parsed text is available for manual review, and the career "
+                "profile remains unchanged."
+            ),
+        )
+    elif orchestration.get("fallback_used"):
+        messages.warning(
+            request,
+            (
+                f"A deterministic fallback created the review draft for "
+                f"{source.display_label}. No career-profile fields or match scores "
+                "were changed."
+            ),
+        )
+    else:
+        messages.success(
+            request,
+            (
+                f"Review draft created from {source.display_label}. "
+                "No career-profile fields or match scores were changed."
+            ),
+        )
     return redirect("candidate_profile:resume_extraction_review")
 
 
