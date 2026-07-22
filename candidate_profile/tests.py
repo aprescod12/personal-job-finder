@@ -1,6 +1,7 @@
 import hashlib
 import shutil
 import tempfile
+from pathlib import Path
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
@@ -149,3 +150,82 @@ class ResumeSourceWorkflowTests(TestCase):
         self.assertTrue(first.is_active)
         self.assertFalse(second.is_active)
         self.assertEqual(ResumeSource.objects.filter(is_active=True).count(), 1)
+
+    def test_remove_action_uses_confirmation_page(self):
+        self._post_upload()
+        source = ResumeSource.objects.get()
+
+        response = self.client.get(
+            reverse("candidate_profile:delete_resume_source", args=[source.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "REMOVE THIS RESUME SOURCE?")
+        self.assertContains(response, source.display_label)
+        self.assertContains(response, "THIS CANNOT BE UNDONE")
+        self.assertTrue(ResumeSource.objects.filter(id=source.id).exists())
+
+    def test_inactive_resume_can_be_removed_with_its_stored_file(self):
+        self._post_upload(
+            upload=self._upload("resume-v1.pdf", b"%PDF-1.4\nversion-one"),
+            label="Version one",
+        )
+        first = ResumeSource.objects.get()
+        self._post_upload(
+            upload=self._upload("resume-v2.pdf", b"%PDF-1.4\nversion-two"),
+            label="Version two",
+        )
+        second = ResumeSource.objects.exclude(id=first.id).get()
+        first.refresh_from_db()
+        stored_path = Path(first.document.path)
+        self.assertTrue(stored_path.exists())
+        self.assertFalse(first.is_active)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                reverse("candidate_profile:delete_resume_source", args=[first.id])
+            )
+
+        self.assertRedirects(response, reverse("candidate_profile:resume_source_list"))
+        self.assertFalse(ResumeSource.objects.filter(id=first.id).exists())
+        self.assertFalse(stored_path.exists())
+        second.refresh_from_db()
+        self.assertTrue(second.is_active)
+
+    def test_removing_active_resume_does_not_silently_activate_older_version(self):
+        self._post_upload(
+            upload=self._upload("resume-v1.pdf", b"%PDF-1.4\nversion-one"),
+            label="Version one",
+        )
+        first = ResumeSource.objects.get()
+        self._post_upload(
+            upload=self._upload("resume-v2.pdf", b"%PDF-1.4\nversion-two"),
+            label="Version two",
+        )
+        active = ResumeSource.objects.exclude(id=first.id).get()
+        stored_path = Path(active.document.path)
+        profile_before = {
+            "professional_headline": self.profile.professional_headline,
+            "skills": self.profile.skills,
+            "updated_at": self.profile.updated_at,
+        }
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                reverse("candidate_profile:delete_resume_source", args=[active.id])
+            )
+
+        self.assertRedirects(response, reverse("candidate_profile:resume_source_list"))
+        self.assertFalse(ResumeSource.objects.filter(id=active.id).exists())
+        self.assertFalse(stored_path.exists())
+        first.refresh_from_db()
+        self.assertFalse(first.is_active)
+        self.assertFalse(ResumeSource.objects.filter(is_active=True).exists())
+
+        self.profile.refresh_from_db()
+        self.assertEqual(
+            self.profile.professional_headline,
+            profile_before["professional_headline"],
+        )
+        self.assertEqual(self.profile.skills, profile_before["skills"])
+        self.assertEqual(self.profile.updated_at, profile_before["updated_at"])
