@@ -1,0 +1,172 @@
+.resume-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 1.5rem;
+    align-items: end;
+    margin-bottom: 1.5rem;
+}
+
+.resume-hero h1 {
+    max-width: 780px;
+    margin-bottom: 0.75rem;
+}
+
+.resume-boundary-card {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    padding: 1.2rem;
+    display: grid;
+    gap: 0.35rem;
+}
+
+.resume-boundary-card span,
+.resume-boundary-card small,
+.resume-history-row span,
+.resume-history-row small {
+    color: var(--muted);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+}
+
+.resume-status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.resume-active-card dl {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 1rem 0;
+}
+
+.resume-active-card dl div {
+    border-top: 1px solid var(--line);
+    padding-top: 0.75rem;
+}
+
+.resume-active-card dt {
+    color: var(--muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+}
+
+.resume-active-card dd {
+    margin: 0.3rem 0 0;
+}
+
+.resume-boundary-explainer ol {
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.65rem;
+}
+
+.resume-boundary-explainer li {
+    display: grid;
+    grid-template-columns: 90px minmax(0, 1fr);
+    gap: 0.75rem;
+    border-top: 1px solid var(--line);
+    padding-top: 0.65rem;
+}
+
+.resume-layout {
+    display: grid;
+    grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.4fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.resume-upload-panel form {
+    margin-top: 1rem;
+}
+
+.resume-upload-panel input[type="file"] {
+    width: 100%;
+    border: 1px dashed var(--line);
+    padding: 0.9rem;
+    background: var(--background);
+}
+
+.resume-history-heading,
+.resume-history-row {
+    display: grid;
+    gap: 1rem;
+}
+
+.resume-history-heading {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.resume-history-heading > span {
+    border: 1px solid var(--line);
+    padding: 0.45rem 0.6rem;
+    font-size: 0.78rem;
+}
+
+.resume-history-list {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.resume-history-row {
+    grid-template-columns: minmax(0, 1.3fr) minmax(160px, 0.8fr) auto;
+    border: 1px solid var(--line);
+    padding: 1rem;
+    align-items: center;
+}
+
+.resume-history-active {
+    box-shadow: inset 4px 0 0 var(--accent);
+}
+
+.resume-history-row > div {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.resume-history-actions {
+    justify-items: end;
+}
+
+.resume-history-actions form {
+    margin: 0;
+}
+
+.resume-version-notes {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--line);
+    padding-top: 0.75rem;
+    margin: 0;
+    color: var(--muted);
+}
+
+.resume-empty-state {
+    min-height: 180px;
+    border: 1px dashed var(--line);
+    display: grid;
+    place-content: center;
+    text-align: center;
+    gap: 0.4rem;
+}
+
+@media (max-width: 900px) {
+    .resume-hero,
+    .resume-status-grid,
+    .resume-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .resume-history-row {
+        grid-template-columns: 1fr;
+    }
+
+    .resume-history-actions {
+        justify-items: start;
+    }
+}
