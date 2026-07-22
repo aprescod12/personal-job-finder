@@ -43,6 +43,31 @@
     </article>
 </section>
 
+{% if extraction.orchestration %}
+<section class="panel resume-extraction-alert">
+    <p class="eyebrow">PROVIDER ATTEMPTS</p>
+    <h2>
+        {% if extraction.orchestration.manual_review_required %}
+        MANUAL REVIEW REQUIRED.
+        {% elif extraction.orchestration.fallback_used %}
+        DETERMINISTIC FALLBACK USED.
+        {% else %}
+        PRIMARY EXTRACTOR SUCCEEDED.
+        {% endif %}
+    </h2>
+    <p class="muted">Status: {{ extraction.orchestration.status }} · Total: {{ extraction.orchestration.total_elapsed_ms }} ms</p>
+    <ul>
+        {% for attempt in extraction.orchestration.attempts %}
+        <li>
+            {% if attempt.provider.label %}{{ attempt.provider.label }}{% else %}{{ attempt.provider_path }}{% endif %}
+            — {% if attempt.success %}success{% else %}failed: {{ attempt.error_category }} · {{ attempt.error_message }}{% endif %}
+            ({{ attempt.elapsed_ms }} ms)
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+
 {% if document.warnings or extraction.warnings %}
 <section class="panel resume-extraction-alert">
     <p class="eyebrow">REVIEW WARNINGS</p>
