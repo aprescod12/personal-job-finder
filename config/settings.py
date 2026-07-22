@@ -139,11 +139,34 @@ OPENAI_JOB_EXTRACTION_MAX_OUTPUT_TOKENS = _env_positive_int(
     4000,
 )
 
-# Stage 5 resume extraction uses a provider contract but remains local and
-# deterministic by default. Future AI providers must also pass the separate
-# RESUME_AI_ENABLED safety switch before they can run.
+# Stage 5 resume extraction remains deterministic unless both the provider path
+# and this separate AI safety switch are changed deliberately.
 RESUME_EXTRACTOR = os.getenv(
     "RESUME_EXTRACTOR",
     "candidate_profile.services.resume_deterministic.DeterministicResumeExtractor",
 ).strip()
 RESUME_AI_ENABLED = _env_bool("RESUME_AI_ENABLED", default=False)
+RESUME_FALLBACK_ENABLED = _env_bool("RESUME_FALLBACK_ENABLED", default=True)
+RESUME_FALLBACK_EXTRACTOR = os.getenv(
+    "RESUME_FALLBACK_EXTRACTOR",
+    "candidate_profile.services.resume_deterministic.DeterministicResumeExtractor",
+).strip()
+
+# OpenAI resume extraction sends only locally parsed text, requests strict JSON,
+# and keeps the returned draft in the existing review-only workflow.
+OPENAI_RESUME_EXTRACTION_MODEL = (
+    os.getenv("OPENAI_RESUME_EXTRACTION_MODEL", "gpt-5-mini").strip()
+    or "gpt-5-mini"
+)
+OPENAI_RESUME_EXTRACTION_TIMEOUT_SECONDS = _env_positive_int(
+    "OPENAI_RESUME_EXTRACTION_TIMEOUT_SECONDS",
+    30,
+)
+OPENAI_RESUME_EXTRACTION_MAX_OUTPUT_TOKENS = _env_positive_int(
+    "OPENAI_RESUME_EXTRACTION_MAX_OUTPUT_TOKENS",
+    5000,
+)
+OPENAI_RESUME_EXTRACTION_MAX_INPUT_CHARS = _env_positive_int(
+    "OPENAI_RESUME_EXTRACTION_MAX_INPUT_CHARS",
+    60000,
+)
