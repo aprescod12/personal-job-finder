@@ -30,7 +30,10 @@
                 <div><dt>STORED</dt><dd>{{ active_source.created_at|date:"M j, Y, g:i a" }}</dd></div>
                 <div><dt>REVIEW</dt><dd>{{ active_source.get_review_status_display }}</dd></div>
             </dl>
-            <a class="button button-secondary" href="{{ active_source.document.url }}" target="_blank" rel="noopener noreferrer">OPEN STORED FILE</a>
+            <div class="resume-active-actions">
+                <a class="button button-secondary" href="{{ active_source.document.url }}" target="_blank" rel="noopener noreferrer">OPEN STORED FILE</a>
+                <a class="button button-danger" href="{% url 'candidate_profile:delete_resume_source' active_source.id %}">REMOVE RESUME</a>
+            </div>
         {% else %}
             <h2>NO ACTIVE RESUME</h2>
             <p>Upload the resume that should become the source of truth for Stage 5 extraction.</p>
@@ -102,6 +105,7 @@
                         <button class="button button-secondary" type="submit">MAKE ACTIVE</button>
                     </form>
                     {% endif %}
+                    <a class="button button-danger" href="{% url 'candidate_profile:delete_resume_source' source.id %}">REMOVE</a>
                 </div>
                 {% if source.notes %}<p class="resume-version-notes">{{ source.notes }}</p>{% endif %}
             </article>
