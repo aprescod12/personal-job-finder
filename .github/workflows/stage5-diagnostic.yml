@@ -1,0 +1,44 @@
+name: Stage 5 diagnostic
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate-profile-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Capture candidate profile test output
+        run: |
+          set +e
+          python manage.py test candidate_profile -v 2 > stage5-test-output.txt 2>&1
+          echo "$?" > stage5-test-status.txt
+          exit 0
+
+      - name: Upload diagnostic output
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage5-test-output
+          path: |
+            stage5-test-output.txt
+            stage5-test-status.txt
+          retention-days: 1
+
+      - name: Report test result
+        run: |
+          cat stage5-test-output.txt
+          test "$(cat stage5-test-status.txt)" = "0"
