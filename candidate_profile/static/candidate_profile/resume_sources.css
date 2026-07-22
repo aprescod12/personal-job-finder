@@ -58,6 +58,14 @@
     margin: 0.3rem 0 0;
 }
 
+.resume-active-actions,
+.resume-delete-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+}
+
 .resume-boundary-explainer ol {
     display: grid;
     gap: 0.65rem;
@@ -136,6 +144,7 @@
 
 .resume-history-actions {
     justify-items: end;
+    gap: 0.55rem;
 }
 
 .resume-history-actions form {
@@ -159,6 +168,44 @@
     gap: 0.4rem;
 }
 
+.resume-delete-panel {
+    display: grid;
+    gap: 1.5rem;
+    max-width: 860px;
+}
+
+.resume-delete-panel dl {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 1rem 0 0;
+}
+
+.resume-delete-panel dl div {
+    border-top: 2px solid var(--ink);
+    padding-top: 0.75rem;
+}
+
+.resume-delete-panel dt {
+    color: var(--muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+}
+
+.resume-delete-panel dd {
+    margin: 0.3rem 0 0;
+}
+
+.resume-delete-warning {
+    border: 3px solid var(--danger);
+    background: var(--danger-soft);
+    padding: 1rem;
+}
+
+.resume-delete-warning p {
+    margin-bottom: 0;
+}
+
 @media (max-width: 900px) {
     .resume-hero,
     .resume-status-grid,
@@ -166,7 +213,8 @@
         grid-template-columns: 1fr;
     }
 
-    .resume-history-row {
+    .resume-history-row,
+    .resume-delete-panel dl {
         grid-template-columns: 1fr;
     }
 
