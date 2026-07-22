@@ -11,16 +11,35 @@
     <div>
         <p class="eyebrow">STAGE 04 / HUMAN REVIEW GATE</p>
         <h1>VERIFY THE DRAFT BEFORE IT ENTERS YOUR PIPELINE.</h1>
-        <p class="muted">Correct every missing or inaccurate field before creating the job and calculating a match score.</p>
+        <p class="muted">Correct every missing or inaccurate field before creating the job. The approved source, extraction metadata, warnings, and final reviewed values will be retained together.</p>
     </div>
     <div class="intake-boundary-card">
         <span>RESULT EXTRACTOR</span>
         <strong>{{ extraction.provider.label|default:"Job extraction provider"|upper }}</strong>
         <small>{{ extraction.provider.version|default:extraction.parser_version|upper }} · {{ extraction.provider.mode|default:"deterministic"|upper }}</small>
         {% if extraction.orchestration %}<small>{{ extraction.orchestration.total_elapsed_ms }} MS TOTAL</small>{% endif %}
-        <small>No job has been created yet.</small>
+        <small>No job or history record has been created yet.</small>
     </div>
 </section>
+
+{% if duplicate_analysis.has_candidates %}
+<section class="panel intake-orchestration-alert {% if duplicate_analysis.blocking %}intake-orchestration-manual{% else %}intake-orchestration-fallback{% endif %}">
+    <div>
+        <p class="eyebrow">DUPLICATE REVIEW</p>
+        <h2>{% if duplicate_analysis.blocking %}AN EXACT MATCH ALREADY EXISTS.{% else %}A SIMILAR TRACKED ROLE EXISTS.{% endif %}</h2>
+        <p>Compare the existing job record with this draft before approval. Exact URL or listing-text matches require an explicit override.</p>
+        <ul>
+            {% for candidate in duplicate_analysis.candidates %}
+            <li>
+                <a class="text-link" href="{% url 'job_detail' candidate.job_id %}" target="_blank" rel="noopener noreferrer">{{ candidate.title }} at {{ candidate.company }}</a>
+                — {{ candidate.reason_label }}{% if candidate.location %} · {{ candidate.location }}{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <strong>{% if duplicate_analysis.blocking %}EXPLICIT OVERRIDE REQUIRED{% else %}REVIEW BEFORE SAVING{% endif %}</strong>
+</section>
+{% endif %}
 
 {% if extraction.orchestration.manual_review_required %}
 <section class="panel intake-orchestration-alert intake-orchestration-manual">
@@ -85,12 +104,14 @@
         <div class="intake-section-heading"><div><p class="eyebrow">01 / REVIEW ALL FIELDS</p><h2>JOB AND REQUIREMENT DRAFT</h2></div><span>Nothing is saved until approval</span></div>
         <div class="intake-text-grid">
             {% for field in form %}
+                {% if field.name != 'confirm_duplicate' %}
                 <div class="form-field intake-field-{{ field.name }}">
                     <label for="{{ field.id_for_label }}">{{ field.label|upper }}</label>
                     {{ field }}
                     {% if field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
                     {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
                 </div>
+                {% endif %}
             {% endfor %}
         </div>
     </section>
@@ -101,7 +122,19 @@
     </details>
 
     <section class="panel intake-final-actions">
-        <div><p class="eyebrow">FINAL REVIEW</p><h2>CREATE THE TRACKED JOB</h2><p>The job will begin as <strong>Unverified</strong> until you confirm the employer link and deadline.</p></div>
+        <div>
+            <p class="eyebrow">FINAL REVIEW</p>
+            <h2>CREATE THE TRACKED JOB AND HISTORY RECORD</h2>
+            <p>The job will begin as <strong>Unverified</strong>. The original source, provider version, attempts, warnings, extracted draft, and final reviewed values will be retained as read-only provenance.</p>
+            {% if duplicate_analysis.blocking %}
+            <div class="form-field">
+                <label for="{{ form.confirm_duplicate.id_for_label }}">{{ form.confirm_duplicate.label|upper }}</label>
+                {{ form.confirm_duplicate }}
+                {% if form.confirm_duplicate.help_text %}<p class="help-text">{{ form.confirm_duplicate.help_text }}</p>{% endif %}
+                {% for error in form.confirm_duplicate.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+            {% endif %}
+        </div>
         <div class="form-actions">
             <button class="button button-primary" type="submit">APPROVE AND CREATE JOB</button>
             <a class="text-link" href="{% url 'job_intake_start' %}">START OVER</a>
