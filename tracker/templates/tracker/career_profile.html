@@ -5,12 +5,13 @@
 {% block content %}
 <section class="profile-hero">
     <div class="profile-hero-copy">
-        <p class="eyebrow">STAGE 02 / DECISION FOUNDATION</p>
+        <p class="eyebrow">STAGE 05 / APPROVED CANDIDATE PROFILE</p>
         <h1>CAREER PROFILE</h1>
         <p class="profile-intro">
-            This is the structured source of truth for what you bring to the market and what you want next.
-            The job-match system will use these fields instead of relying on vague or repeated prompts.
+            This remains the approved structured source of truth used by job matching.
+            Resume files are stored separately and cannot change these fields until a later extraction and human-review step.
         </p>
+        <a class="button button-secondary" href="{% url 'candidate_profile:resume_source_list' %}">MANAGE RESUME SOURCES</a>
     </div>
     <div class="profile-status-card">
         <span class="profile-status-dot" aria-hidden="true"></span>
@@ -95,8 +96,8 @@
 
     <div class="profile-save-bar">
         <div>
-            <strong>SAVE THE SOURCE OF TRUTH</strong>
-            <span>Match scoring is the next Stage 2 feature. It is not active yet.</span>
+            <strong>SAVE THE APPROVED SOURCE OF TRUTH</strong>
+            <span>Job-match analysis uses these reviewed fields. Stored resume sources remain evidence until separately extracted and approved.</span>
         </div>
         <button class="button button-primary profile-save-button" type="submit">SAVE CAREER PROFILE</button>
     </div>
