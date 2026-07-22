@@ -1,0 +1,277 @@
+.resume-extraction-heading {
+    align-items: end;
+}
+
+.resume-extraction-boundary {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    min-width: 260px;
+    gap: 0.35rem;
+    border: 3px solid #fff;
+    background: var(--ink);
+    box-shadow: 6px 6px 0 var(--violet);
+    padding: 1.2rem;
+}
+
+.resume-extraction-boundary span,
+.resume-extraction-boundary small {
+    color: #cfd5e2;
+    font-size: 0.72rem;
+    font-weight: 850;
+    letter-spacing: 0.1em;
+}
+
+.resume-extraction-boundary strong {
+    color: var(--lime);
+}
+
+.resume-extraction-meta,
+.resume-extraction-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.resume-extraction-meta dl {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 1rem 0 0;
+}
+
+.resume-extraction-meta dl div {
+    border-top: 2px solid var(--ink);
+    padding-top: 0.75rem;
+}
+
+.resume-extraction-meta dt,
+.resume-identity-grid span,
+.resume-entry-card small,
+.resume-extraction-section header > span {
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.resume-extraction-meta dd {
+    overflow-wrap: anywhere;
+    margin: 0.3rem 0 0;
+}
+
+.resume-extraction-alert {
+    margin-bottom: 1rem;
+    border-color: var(--danger);
+    background: var(--danger-soft);
+    box-shadow: 7px 7px 0 var(--danger);
+}
+
+.resume-extraction-alert .eyebrow {
+    color: var(--danger);
+}
+
+.resume-extraction-alert ul {
+    margin-bottom: 0;
+}
+
+.resume-extraction-section {
+    margin-bottom: 1rem;
+}
+
+.resume-extraction-columns .resume-extraction-section {
+    margin-bottom: 0;
+}
+
+.resume-extraction-section > header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+    border-bottom: 3px solid var(--ink);
+    padding-bottom: 0.9rem;
+}
+
+.resume-extraction-section > header h2 {
+    margin-bottom: 0;
+}
+
+.resume-extraction-section > header > span {
+    display: grid;
+    min-width: 34px;
+    min-height: 34px;
+    place-items: center;
+    border: 2px solid var(--ink);
+    background: var(--lime);
+    color: var(--ink);
+}
+
+.resume-identity-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.resume-identity-grid article {
+    display: grid;
+    min-height: 110px;
+    align-content: space-between;
+    gap: 0.75rem;
+    border: 2px solid var(--ink);
+    background: #fff;
+    padding: 1rem;
+}
+
+.resume-identity-grid strong {
+    overflow-wrap: anywhere;
+}
+
+.resume-summary-copy {
+    max-width: 900px;
+    font-size: 1.05rem;
+}
+
+.resume-entry-card {
+    display: grid;
+    gap: 0.45rem;
+    margin-top: 0.8rem;
+    border: 2px solid var(--ink);
+    background: #fff;
+    padding: 1rem;
+}
+
+.resume-entry-card:first-of-type {
+    margin-top: 0;
+}
+
+.resume-entry-card > strong {
+    font-size: 1.05rem;
+}
+
+.resume-entry-card > span {
+    color: var(--ink-soft);
+    font-weight: 800;
+}
+
+.resume-entry-card ul {
+    margin: 0.35rem 0 0;
+    padding-left: 1.2rem;
+}
+
+.resume-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-top: 1rem;
+}
+
+.resume-chip-list span {
+    border: 2px solid var(--ink);
+    background: var(--sky);
+    box-shadow: 2px 2px 0 var(--ink);
+    padding: 0.42rem 0.65rem;
+    font-size: 0.76rem;
+    font-weight: 900;
+}
+
+.resume-evidence-list {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.resume-evidence-list article {
+    display: grid;
+    gap: 0.45rem;
+    border-left: 6px solid var(--violet);
+    background: #fff;
+    padding: 1rem;
+}
+
+.resume-evidence-list p,
+.resume-evidence-list small {
+    margin: 0;
+}
+
+.resume-evidence-list small {
+    color: var(--muted);
+}
+
+.resume-raw-text {
+    margin-bottom: 1rem;
+}
+
+.resume-raw-text summary {
+    cursor: pointer;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+}
+
+.resume-raw-text pre {
+    max-height: 520px;
+    overflow: auto;
+    margin: 1rem 0 0;
+    border: 2px solid var(--ink);
+    background: #fff;
+    padding: 1rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.resume-extraction-final {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    background: var(--ink);
+    color: #fff;
+}
+
+.resume-extraction-final h2 {
+    margin-bottom: 0.5rem;
+}
+
+.resume-extraction-final p:last-child {
+    margin-bottom: 0;
+    color: #cfd5e2;
+}
+
+.resume-extraction-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: end;
+    gap: 0.75rem;
+}
+
+.resume-extraction-actions form {
+    margin: 0;
+}
+
+@media (max-width: 900px) {
+    .resume-extraction-heading,
+    .resume-extraction-meta,
+    .resume-extraction-columns,
+    .resume-identity-grid,
+    .resume-extraction-meta dl {
+        grid-template-columns: 1fr;
+    }
+
+    .resume-extraction-heading {
+        display: grid;
+    }
+
+    .resume-extraction-boundary {
+        min-width: 0;
+    }
+
+    .resume-extraction-final {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .resume-extraction-actions {
+        justify-content: start;
+    }
+}

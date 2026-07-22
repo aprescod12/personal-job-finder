@@ -49,13 +49,13 @@ class ResumeSourceWorkflowTests(TestCase):
             data,
         )
 
-    def test_resume_page_discloses_source_only_boundary(self):
+    def test_resume_page_discloses_source_and_draft_boundary(self):
         response = self.client.get(reverse("candidate_profile:resume_source_list"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "SOURCE STORAGE ONLY")
-        self.assertContains(response, "does not parse it")
-        self.assertContains(response, "does not")
+        self.assertContains(response, "SOURCE + REVIEW DRAFT")
+        self.assertContains(response, "does not update the approved career profile")
+        self.assertContains(response, "Applying claims to the profile comes later")
 
     def test_first_upload_is_stored_fingerprinted_and_active(self):
         content = b"%PDF-1.4\nresume-v1"

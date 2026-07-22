@@ -138,3 +138,12 @@ OPENAI_JOB_EXTRACTION_MAX_OUTPUT_TOKENS = _env_positive_int(
     "OPENAI_JOB_EXTRACTION_MAX_OUTPUT_TOKENS",
     4000,
 )
+
+# Stage 5 resume extraction uses a provider contract but remains local and
+# deterministic by default. Future AI providers must also pass the separate
+# RESUME_AI_ENABLED safety switch before they can run.
+RESUME_EXTRACTOR = os.getenv(
+    "RESUME_EXTRACTOR",
+    "candidate_profile.services.resume_deterministic.DeterministicResumeExtractor",
+).strip()
+RESUME_AI_ENABLED = _env_bool("RESUME_AI_ENABLED", default=False)

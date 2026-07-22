@@ -2,8 +2,11 @@ from django.urls import path
 
 from .views import (
     activate_resume_source,
+    clear_resume_extraction,
     delete_resume_source,
+    resume_extraction_review,
     resume_source_list,
+    run_resume_extraction,
 )
 
 
@@ -20,5 +23,20 @@ urlpatterns = [
         "<int:source_id>/delete/",
         delete_resume_source,
         name="delete_resume_source",
+    ),
+    path(
+        "<int:source_id>/extract/",
+        run_resume_extraction,
+        name="run_resume_extraction",
+    ),
+    path(
+        "extraction/review/",
+        resume_extraction_review,
+        name="resume_extraction_review",
+    ),
+    path(
+        "extraction/clear/",
+        clear_resume_extraction,
+        name="clear_resume_extraction",
     ),
 ]

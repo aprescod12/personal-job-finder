@@ -10,14 +10,25 @@
     <div>
         <p class="eyebrow">STAGE 05 / CANDIDATE EVIDENCE</p>
         <h1>RESUME SOURCE CONTROL</h1>
-        <p class="muted">Store the original resume versions that future extraction runs will use. Uploading a file does not parse it, call an AI provider, or change the structured career profile.</p>
+        <p class="muted">Store versioned resume evidence and create a structured review draft. Extraction remains read-only: it does not update the approved career profile or job-match scores.</p>
     </div>
     <div class="resume-boundary-card">
         <span>CURRENT BOUNDARY</span>
-        <strong>SOURCE STORAGE ONLY</strong>
-        <small>Extraction and profile updates come later.</small>
+        <strong>SOURCE + REVIEW DRAFT</strong>
+        <small>Applying claims to the profile comes later.</small>
     </div>
 </section>
+
+{% if has_extraction_draft %}
+<section class="panel resume-draft-banner">
+    <div>
+        <p class="eyebrow">DRAFT WAITING</p>
+        <strong>A resume extraction draft is available for review.</strong>
+        <span>The draft exists only in your session and has not changed your career profile.</span>
+    </div>
+    <a class="button button-primary" href="{% url 'candidate_profile:resume_extraction_review' %}">REVIEW CURRENT DRAFT</a>
+</section>
+{% endif %}
 
 <section class="resume-status-grid">
     <article class="panel resume-active-card">
@@ -31,23 +42,27 @@
                 <div><dt>REVIEW</dt><dd>{{ active_source.get_review_status_display }}</dd></div>
             </dl>
             <div class="resume-active-actions">
+                <form method="post" action="{% url 'candidate_profile:run_resume_extraction' active_source.id %}">
+                    {% csrf_token %}
+                    <button class="button button-primary" type="submit">EXTRACT REVIEW DRAFT</button>
+                </form>
                 <a class="button button-secondary" href="{{ active_source.document.url }}" target="_blank" rel="noopener noreferrer">OPEN STORED FILE</a>
                 <a class="button button-danger" href="{% url 'candidate_profile:delete_resume_source' active_source.id %}">REMOVE RESUME</a>
             </div>
         {% else %}
             <h2>NO ACTIVE RESUME</h2>
-            <p>Upload the resume that should become the source of truth for Stage 5 extraction.</p>
+            <p>Upload or explicitly activate the resume that should supply the next extraction draft.</p>
         {% endif %}
     </article>
 
     <article class="panel resume-boundary-explainer">
-        <p class="eyebrow">WHY THIS IS SEPARATE</p>
+        <p class="eyebrow">CONTROLLED PIPELINE</p>
         <h2>THE FILE IS EVIDENCE, NOT THE PROFILE.</h2>
         <ol>
             <li><strong>Store</strong><span>Keep the original document and immutable fingerprint.</span></li>
-            <li><strong>Extract later</strong><span>Produce a structured draft with provider and version metadata.</span></li>
-            <li><strong>Review</strong><span>Correct claims before they enter candidate evidence.</span></li>
-            <li><strong>Apply</strong><span>Only approved evidence updates the reusable profile.</span></li>
+            <li><strong>Read</strong><span>Convert PDF, DOCX, or TXT content into local document text.</span></li>
+            <li><strong>Extract</strong><span>A configured provider creates a structured draft with evidence.</span></li>
+            <li><strong>Review</strong><span>Inspect the draft before any claim can enter the reusable profile.</span></li>
         </ol>
     </article>
 </section>
@@ -98,6 +113,10 @@
                     <small>{{ source.file_size|filesizeformat }} · {{ source.created_at|date:"M j, Y" }}</small>
                 </div>
                 <div class="resume-history-actions">
+                    <form method="post" action="{% url 'candidate_profile:run_resume_extraction' source.id %}">
+                        {% csrf_token %}
+                        <button class="button button-primary" type="submit">EXTRACT DRAFT</button>
+                    </form>
                     <a class="text-link" href="{{ source.document.url }}" target="_blank" rel="noopener noreferrer">OPEN FILE →</a>
                     {% if not source.is_active %}
                     <form method="post" action="{% url 'candidate_profile:activate_resume_source' source.id %}">
