@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "tracker",
     "intake_history.apps.IntakeHistoryConfig",
+    "candidate_profile.apps.CandidateProfileConfig",
 ]
 
 MIDDLEWARE = [
@@ -98,6 +99,8 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 STATIC_URL = "static/"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Stage 4 job-intake provider. The deterministic provider remains the default.
