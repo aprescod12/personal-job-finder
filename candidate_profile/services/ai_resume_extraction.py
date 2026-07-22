@@ -16,7 +16,7 @@ from .resume_extraction import (
 
 AI_RESUME_SCHEMA_NAME = "resume_profile_extraction"
 AI_RESUME_SCHEMA_VERSION = "resume-extraction-schema-v1"
-AI_RESUME_EXTRACTOR_VERSION = "structured-ai-resume-extractor-v2"
+AI_RESUME_EXTRACTOR_VERSION = "structured-ai-resume-extractor-v3"
 
 _ENTRY_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -115,7 +115,7 @@ Rules:
 4. Preserve the candidate's wording. Do not rewrite a new professional summary.
 5. Use empty strings or empty lists when the resume does not provide enough evidence.
 6. For education, experience, projects, certifications, and leadership, keep each visible entry separate.
-7. Every source_text value must be a short verbatim excerpt from the supplied resume.
+7. Every source_text value should be a short verbatim excerpt from the supplied resume.
 8. Every non-empty identity value, link, skill, detail, heading, subheading, and date must be grounded in the supplied resume.
 9. For each structured entry, include its heading, subheading, dates, and details inside source_text whenever the resume layout permits it.
 10. Evidence must identify the schema field, include a short verbatim excerpt, and explain why it supports the field.
@@ -233,6 +233,12 @@ def _is_grounded_text(value: str, source_text: str) -> bool:
     return bool(compact_value and compact_value in compact_source)
 
 
+def _is_verbatim_excerpt(value: str, document_text: str) -> bool:
+    normalized_value = _normalized_grounding_text(value)
+    normalized_document = _normalized_grounding_text(document_text)
+    return bool(normalized_value and normalized_value in normalized_document)
+
+
 def _require_grounded_text(
     value: Any,
     *,
@@ -246,25 +252,6 @@ def _require_grounded_text(
     if not _is_grounded_text(text, source_text):
         raise _invalid(
             f"AI field '{field_name}' is not grounded in the supplied resume text."
-        )
-    return text
-
-
-def _require_verbatim_source_text(
-    value: Any,
-    *,
-    field_name: str,
-    document_text: str,
-) -> str:
-    text = _require_string(value, field_name)
-    if not text:
-        return ""
-
-    normalized_text = _normalized_grounding_text(text)
-    normalized_document = _normalized_grounding_text(document_text)
-    if normalized_text not in normalized_document:
-        raise _invalid(
-            f"AI field '{field_name}' is not a verbatim excerpt from the supplied resume text."
         )
     return text
 
@@ -286,6 +273,121 @@ def _require_grounded_string_list(
     ]
 
 
+def _deduplicate_claims(values: Sequence[str]) -> list[str]:
+    claims: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        cleaned = value.strip()
+        normalized = _compact_grounding_text(cleaned)
+        if cleaned and normalized and normalized not in seen:
+            claims.append(cleaned)
+            seen.add(normalized)
+    return claims
+
+
+def _resume_blocks(document_text: str) -> list[list[str]]:
+    blocks: list[list[str]] = []
+    current: list[str] = []
+    for raw_line in document_text.splitlines():
+        line = raw_line.strip()
+        if line:
+            current.append(line)
+            continue
+        if current:
+            blocks.append(current)
+            current = []
+    if current:
+        blocks.append(current)
+    return blocks
+
+
+def _supported_claim_indexes(excerpt: str, claims: Sequence[str]) -> tuple[int, ...]:
+    return tuple(
+        index for index, claim in enumerate(claims) if _is_grounded_text(claim, excerpt)
+    )
+
+
+def _find_local_source_excerpt(
+    *,
+    document_text: str,
+    claims: Sequence[str],
+    max_window_lines: int = 8,
+) -> str:
+    cleaned_claims = _deduplicate_claims(claims)
+    if not cleaned_claims:
+        return ""
+
+    best_excerpt = ""
+    best_score: tuple[int, int, int, int] | None = None
+    claim_total = len(cleaned_claims)
+
+    for block in _resume_blocks(document_text):
+        for start in range(len(block)):
+            max_end = min(len(block), start + max_window_lines)
+            for end in range(start + 1, max_end + 1):
+                lines = block[start:end]
+                excerpt = "\n".join(lines)
+                supported = _supported_claim_indexes(excerpt, cleaned_claims)
+                if not supported:
+                    continue
+
+                line_count = len(lines)
+                complete = int(len(supported) == claim_total)
+                score = (
+                    complete,
+                    len(supported),
+                    -line_count,
+                    -len(excerpt),
+                )
+                if best_score is None or score > best_score:
+                    best_score = score
+                    best_excerpt = excerpt
+
+    return best_excerpt
+
+
+def _anchor_source_text(
+    value: Any,
+    *,
+    field_name: str,
+    document_text: str,
+    claims: Sequence[str],
+    validation_warnings: list[str],
+) -> str:
+    provider_excerpt = _require_string(value, field_name)
+    cleaned_claims = _deduplicate_claims(claims)
+    if not cleaned_claims:
+        raise _invalid(
+            f"AI field '{field_name}' has no extracted claim that can be grounded."
+        )
+
+    provider_is_verbatim = _is_verbatim_excerpt(provider_excerpt, document_text)
+    provider_supports_claim = bool(
+        provider_excerpt and _supported_claim_indexes(provider_excerpt, cleaned_claims)
+    )
+    if provider_is_verbatim and provider_supports_claim:
+        return provider_excerpt
+
+    local_excerpt = _find_local_source_excerpt(
+        document_text=document_text,
+        claims=cleaned_claims,
+    )
+    if not local_excerpt:
+        raise _invalid(
+            f"AI field '{field_name}' could not be anchored to supporting resume text."
+        )
+
+    reason = (
+        "was not a verbatim excerpt"
+        if provider_excerpt and not provider_is_verbatim
+        else "did not support the extracted claim"
+    )
+    validation_warnings.append(
+        f"Re-anchored {field_name} locally because the provider excerpt {reason}."
+    )
+    return local_excerpt
+
+
 def _append_excerpt_warning(
     warnings: list[str],
     *,
@@ -298,6 +400,17 @@ def _append_excerpt_warning(
             f"Review evidence for {field_name}: the claim is grounded in the full "
             "resume, but the selected source excerpt does not contain it."
         )
+
+
+def _entry_claims(entry: Mapping[str, Any]) -> list[str]:
+    return _deduplicate_claims(
+        [
+            str(entry.get("heading", "")),
+            str(entry.get("subheading", "")),
+            str(entry.get("dates", "")),
+            *[str(detail) for detail in entry.get("details", [])],
+        ]
+    )
 
 
 def _validate_entries(
@@ -316,14 +429,6 @@ def _validate_entries(
         item_name = f"{field_name}[{index}]"
         entry = _require_mapping(item, item_name)
         _require_exact_keys(entry, field_name=item_name, expected=expected)
-
-        source_excerpt = _require_verbatim_source_text(
-            entry["source_text"],
-            field_name=f"{item_name}.source_text",
-            document_text=document_text,
-        )
-        if not source_excerpt:
-            raise _invalid(f"AI field '{item_name}.source_text' cannot be blank.")
 
         heading = _require_grounded_text(
             entry["heading"],
@@ -344,6 +449,19 @@ def _validate_entries(
             entry["details"],
             field_name=f"{item_name}.details",
             source_text=document_text,
+        )
+        validated_entry = {
+            "heading": heading,
+            "subheading": subheading,
+            "dates": dates,
+            "details": details,
+        }
+        source_excerpt = _anchor_source_text(
+            entry["source_text"],
+            field_name=f"{item_name}.source_text",
+            document_text=document_text,
+            claims=_entry_claims(validated_entry),
+            validation_warnings=validation_warnings,
         )
 
         _append_excerpt_warning(
@@ -372,22 +490,50 @@ def _validate_entries(
                 source_excerpt=source_excerpt,
             )
 
-        entries.append(
-            {
-                "heading": heading,
-                "subheading": subheading,
-                "dates": dates,
-                "details": details,
-                "source_text": source_excerpt,
-            }
-        )
+        entries.append({**validated_entry, "source_text": source_excerpt})
     return entries
+
+
+def _profile_entry_claims(entries: Sequence[Mapping[str, Any]]) -> list[str]:
+    claims: list[str] = []
+    for entry in entries:
+        claims.extend(_entry_claims(entry))
+    return _deduplicate_claims(claims)
+
+
+def _field_claims(
+    *,
+    identity: Mapping[str, Any],
+    profile: Mapping[str, Any],
+) -> dict[str, list[str]]:
+    return {
+        "identity.full_name": _deduplicate_claims([str(identity["full_name"])]),
+        "identity.email": _deduplicate_claims([str(identity["email"])]),
+        "identity.phone": _deduplicate_claims([str(identity["phone"])]),
+        "identity.location": _deduplicate_claims([str(identity["location"])]),
+        "identity.links": _deduplicate_claims(
+            [str(link) for link in identity["links"]]
+        ),
+        "profile.professional_summary": _deduplicate_claims(
+            [str(profile["professional_summary"])]
+        ),
+        "profile.education": _profile_entry_claims(profile["education"]),
+        "profile.experience": _profile_entry_claims(profile["experience"]),
+        "profile.projects": _profile_entry_claims(profile["projects"]),
+        "profile.skills": _deduplicate_claims(
+            [str(skill) for skill in profile["skills"]]
+        ),
+        "profile.certifications": _profile_entry_claims(profile["certifications"]),
+        "profile.leadership": _profile_entry_claims(profile["leadership"]),
+    }
 
 
 def _validate_evidence(
     value: Any,
     *,
     document_text: str,
+    field_claims: Mapping[str, Sequence[str]],
+    validation_warnings: list[str],
 ) -> list[dict[str, str]]:
     if not isinstance(value, list):
         raise _invalid("AI field 'evidence' must be a list.")
@@ -398,18 +544,22 @@ def _validate_evidence(
         item_name = f"evidence[{index}]"
         evidence = _require_mapping(item, item_name)
         _require_exact_keys(evidence, field_name=item_name, expected=expected)
+        field = _require_enum(
+            evidence["field"],
+            f"{item_name}.field",
+            _EVIDENCE_FIELDS,
+        )
+        source_excerpt = _anchor_source_text(
+            evidence["source_text"],
+            field_name=f"{item_name}.source_text",
+            document_text=document_text,
+            claims=field_claims.get(field, []),
+            validation_warnings=validation_warnings,
+        )
         evidence_items.append(
             {
-                "field": _require_enum(
-                    evidence["field"],
-                    f"{item_name}.field",
-                    _EVIDENCE_FIELDS,
-                ),
-                "source_text": _require_verbatim_source_text(
-                    evidence["source_text"],
-                    field_name=f"{item_name}.source_text",
-                    document_text=document_text,
-                ),
+                "field": field,
+                "source_text": source_excerpt,
                 "note": _require_string(evidence["note"], f"{item_name}.note"),
             }
         )
@@ -518,7 +668,12 @@ def validate_ai_resume_payload(
         ),
     }
 
-    evidence = _validate_evidence(root["evidence"], document_text=document_text)
+    evidence = _validate_evidence(
+        root["evidence"],
+        document_text=document_text,
+        field_claims=_field_claims(identity=identity, profile=profile),
+        validation_warnings=validation_warnings,
+    )
     provider_warnings = _require_string_list(root["warnings"], "warnings")
     warnings = _require_string_list(
         [*provider_warnings, *validation_warnings],
