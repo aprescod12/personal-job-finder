@@ -18,7 +18,7 @@
         <strong>{{ extraction.provider.label|default:"Job extraction provider"|upper }}</strong>
         <small>{{ extraction.provider.version|default:extraction.parser_version|upper }} · {{ extraction.provider.mode|default:"deterministic"|upper }}</small>
         {% if extraction.orchestration %}<small>{{ extraction.orchestration.total_elapsed_ms }} MS TOTAL</small>{% endif %}
-        <small>No job or history record has been created yet.</small>
+        <small>No job has been created yet. No history record exists yet.</small>
     </div>
 </section>
 
