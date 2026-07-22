@@ -255,13 +255,15 @@ class StructuredResumeGroundingBoundaryTests(SimpleTestCase):
             )
         )
 
-    def test_exact_but_unrelated_field_evidence_is_reanchored(self):
+    def test_exact_but_unrelated_field_evidence_is_rejected(self):
         payload = deepcopy(valid_payload())
         payload["evidence"][0]["source_text"] = "Engineering Intern"
 
-        result = self.extract(payload).to_dict()
-
-        self.assertEqual(result["evidence"][0]["source_text"], EDUCATION_BLOCK)
+        with self.assertRaisesMessage(
+            ResumeExtractionError,
+            "does not support any extracted claim",
+        ):
+            self.extract(payload)
 
     def test_invented_degree_is_rejected_before_excerpt_reanchoring(self):
         payload = separate_degree_payload()
