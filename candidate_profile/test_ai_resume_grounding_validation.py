@@ -20,6 +20,12 @@ Medical Device Company | Summer 2025
 Developed and tested embedded sensing prototypes.
 """
 
+EDUCATION_BLOCK = (
+    "Villanova University\n"
+    "B.S. Electrical Engineering | 2025\n"
+    "M.S. Biomedical Engineering Candidate | 2027"
+)
+
 
 def request_for_resume():
     return ResumeExtractionRequest(
@@ -50,11 +56,7 @@ def valid_payload():
                     "subheading": "B.S. Electrical Engineering",
                     "dates": "2025",
                     "details": ["M.S. Biomedical Engineering Candidate"],
-                    "source_text": (
-                        "Villanova University\n"
-                        "B.S. Electrical Engineering | 2025\n"
-                        "M.S. Biomedical Engineering Candidate | 2027"
-                    ),
+                    "source_text": EDUCATION_BLOCK,
                 }
             ],
             "experience": [
@@ -89,6 +91,30 @@ def valid_payload():
         ],
         "warnings": [],
     }
+
+
+def separate_degree_payload():
+    payload = valid_payload()
+    payload["profile"]["education"] = [
+        {
+            "heading": "Villanova University",
+            "subheading": "B.S. Electrical Engineering",
+            "dates": "2025",
+            "details": [],
+            "source_text": "Villanova University\nB.S. Electrical Engineering | 2025",
+        },
+        {
+            "heading": "Villanova University",
+            "subheading": "M.S. Biomedical Engineering Candidate",
+            "dates": "2027",
+            "details": [],
+            "source_text": (
+                "Villanova University\n"
+                "M.S. Biomedical Engineering Candidate | 2027"
+            ),
+        },
+    ]
+    return payload
 
 
 class StructuredResumeGroundingBoundaryTests(SimpleTestCase):
@@ -151,27 +177,116 @@ class StructuredResumeGroundingBoundaryTests(SimpleTestCase):
         ):
             self.extract(payload)
 
-    def test_entry_source_excerpt_must_still_be_verbatim(self):
+    def test_non_verbatim_entry_excerpt_is_replaced_with_local_text(self):
         payload = deepcopy(valid_payload())
         payload["profile"]["education"][0]["source_text"] = (
-            "Invented education excerpt"
+            "Villanova University — BS Electrical Engineering, class of 2025"
         )
 
-        with self.assertRaisesMessage(
-            ResumeExtractionError,
-            "not a verbatim excerpt",
-        ):
-            self.extract(payload)
+        result = self.extract(payload).to_dict()
 
-    def test_source_excerpt_cannot_use_punctuation_normalization(self):
+        self.assertEqual(
+            result["profile"]["education"][0]["source_text"],
+            EDUCATION_BLOCK,
+        )
+        self.assertTrue(
+            any(
+                "Re-anchored profile.education[0].source_text" in warning
+                for warning in result["warnings"]
+            )
+        )
+
+    def test_punctuation_rewritten_excerpt_is_locally_reanchored(self):
         payload = deepcopy(valid_payload())
         payload["profile"]["education"][0]["source_text"] = (
             "Villanova University\nBS Electrical Engineering | 2025"
         )
 
+        result = self.extract(payload).to_dict()
+
+        self.assertEqual(
+            result["profile"]["education"][0]["source_text"],
+            EDUCATION_BLOCK,
+        )
+
+    def test_two_degrees_under_one_institution_anchor_second_entry(self):
+        payload = separate_degree_payload()
+
+        result = self.extract(payload).to_dict()
+
+        second = result["profile"]["education"][1]
+        self.assertEqual(second["heading"], "Villanova University")
+        self.assertEqual(
+            second["subheading"],
+            "M.S. Biomedical Engineering Candidate",
+        )
+        self.assertEqual(second["source_text"], EDUCATION_BLOCK)
+        self.assertTrue(
+            any(
+                "Re-anchored profile.education[1].source_text" in warning
+                for warning in result["warnings"]
+            )
+        )
+
+    def test_blank_entry_excerpt_is_rebuilt_from_valid_claims(self):
+        payload = deepcopy(valid_payload())
+        payload["profile"]["education"][0]["source_text"] = ""
+
+        result = self.extract(payload).to_dict()
+
+        self.assertEqual(
+            result["profile"]["education"][0]["source_text"],
+            EDUCATION_BLOCK,
+        )
+
+    def test_non_verbatim_field_evidence_is_locally_reanchored(self):
+        payload = deepcopy(valid_payload())
+        payload["evidence"][0]["source_text"] = (
+            "Villanova University awarded the engineering degree in 2025."
+        )
+
+        result = self.extract(payload).to_dict()
+
+        self.assertEqual(result["evidence"][0]["source_text"], EDUCATION_BLOCK)
+        self.assertTrue(
+            any(
+                "Re-anchored evidence[0].source_text" in warning
+                for warning in result["warnings"]
+            )
+        )
+
+    def test_exact_but_unrelated_field_evidence_is_reanchored(self):
+        payload = deepcopy(valid_payload())
+        payload["evidence"][0]["source_text"] = "Engineering Intern"
+
+        result = self.extract(payload).to_dict()
+
+        self.assertEqual(result["evidence"][0]["source_text"], EDUCATION_BLOCK)
+
+    def test_invented_degree_is_rejected_before_excerpt_reanchoring(self):
+        payload = separate_degree_payload()
+        payload["profile"]["education"][1]["subheading"] = (
+            "Ph.D. Biomedical Engineering"
+        )
+        payload["profile"]["education"][1]["source_text"] = ""
+
         with self.assertRaisesMessage(
             ResumeExtractionError,
-            "not a verbatim excerpt",
+            "profile.education[1].subheading",
+        ):
+            self.extract(payload)
+
+    def test_evidence_for_empty_field_is_rejected(self):
+        payload = deepcopy(valid_payload())
+        payload["evidence"][0] = {
+            "field": "profile.certifications",
+            "source_text": "Villanova University",
+            "note": "No certification claim exists.",
+        }
+
+        with self.assertRaisesMessage(
+            ResumeExtractionError,
+            "has no extracted claim",
         ):
             self.extract(payload)
 
