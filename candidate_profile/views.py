@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods, require_POST
 
 from tracker.models import CareerProfile
 
@@ -65,4 +65,41 @@ def activate_resume_source(request, source_id):
             "This still does not update the structured career profile."
         ),
     )
+    return redirect("candidate_profile:resume_source_list")
+
+
+@require_http_methods(["GET", "POST"])
+def delete_resume_source(request, source_id):
+    profile = CareerProfile.get_solo()
+    source = get_object_or_404(ResumeSource, id=source_id, profile=profile)
+
+    if request.method == "GET":
+        return render(
+            request,
+            "candidate_profile/resume_source_confirm_delete.html",
+            {
+                "profile": profile,
+                "source": source,
+            },
+        )
+
+    display_label = source.display_label
+    was_active = source.is_active
+    storage = source.document.storage
+    stored_name = source.document.name
+
+    with transaction.atomic():
+        source.delete()
+        if stored_name:
+            transaction.on_commit(lambda: storage.delete(stored_name))
+
+    if was_active:
+        message = (
+            f"Resume source removed: {display_label}. No resume is active now; "
+            "choose another stored version explicitly before future extraction."
+        )
+    else:
+        message = f"Resume source removed: {display_label}."
+
+    messages.success(request, message)
     return redirect("candidate_profile:resume_source_list")
