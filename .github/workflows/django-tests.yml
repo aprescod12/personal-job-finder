@@ -36,7 +36,7 @@ jobs:
         run: python manage.py evaluate_job_extraction --format json --output /tmp/job-evaluation.json
 
       - name: Run offline resume evaluation
-        run: python manage.py evaluate_resume_extraction --minimum-agreement 60 --output /tmp/resume-evaluation.json
+        run: python manage.py evaluate_resume_extraction --provider deterministic --minimum-agreement 60 --output /tmp/resume-evaluation.json
 
       - name: Run tests
         run: python manage.py test
