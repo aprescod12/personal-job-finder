@@ -367,6 +367,10 @@ def _anchor_source_text(
     )
     if provider_is_verbatim and provider_supports_claim:
         return provider_excerpt
+    if provider_excerpt and not provider_supports_claim:
+        raise _invalid(
+            f"AI field '{field_name}' does not support any extracted claim."
+        )
 
     local_excerpt = _find_local_source_excerpt(
         document_text=document_text,
