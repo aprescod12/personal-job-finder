@@ -10,26 +10,27 @@
 
 <section class="page-heading intake-heading">
     <div>
-        <p class="eyebrow">STAGE 04 / INTAKE FOUNDATION</p>
-        <h1>PASTE ONCE. REVIEW BEFORE SAVING.</h1>
-        <p class="muted">The intake assistant extracts conservative hints from the listing text. It does not browse the web, call an external AI model, or create a job until you approve the next screen.</p>
+        <p class="eyebrow">STAGE 04 / CONTROLLED INTAKE</p>
+        <h1>PASTE ONCE. CHECK FOR DUPLICATES. REVIEW BEFORE SAVING.</h1>
+        <p class="muted">The configured extractor prepares an editable draft. Exact URL and listing-text matches are stopped before extraction, and no job or history record is created until you approve the review screen.</p>
     </div>
     <div class="intake-boundary-card">
-        <span>CURRENT CAPABILITY</span>
-        <strong>DETERMINISTIC DRAFT</strong>
-        <small>Every extracted field remains editable.</small>
+        <span>SAFETY BOUNDARY</span>
+        <strong>HUMAN APPROVAL REQUIRED</strong>
+        <small>Duplicate checks run before persistence.</small>
     </div>
 </section>
 
 <section class="intake-layout">
     <article class="panel intake-explainer">
         <p class="eyebrow">HOW IT WORKS</p>
-        <h2>CONTROLLED TWO-STEP INTAKE</h2>
+        <h2>CONTROLLED INTAKE WITH PROVENANCE</h2>
         <ol>
             <li><strong>Paste</strong><span>Add the full listing text and direct URL.</span></li>
-            <li><strong>Extract</strong><span>The app identifies labeled fields and clear sections.</span></li>
-            <li><strong>Review</strong><span>Correct the role, company, location, deadline, and requirements.</span></li>
-            <li><strong>Create</strong><span>The job and structured requirements are saved only after approval.</span></li>
+            <li><strong>Check</strong><span>Exact URL and text matches are flagged before extraction.</span></li>
+            <li><strong>Extract</strong><span>The configured provider prepares a reviewable draft.</span></li>
+            <li><strong>Review</strong><span>Correct every field and explicitly resolve duplicate warnings.</span></li>
+            <li><strong>Create</strong><span>The approved job and its source history are saved together.</span></li>
         </ol>
         <a class="text-link" href="{% url 'job_create' %}">Prefer the original manual form? Add a job directly →</a>
     </article>
@@ -39,13 +40,44 @@
             {% csrf_token %}
             {% if form.non_field_errors %}<div class="field-error">{{ form.non_field_errors }}</div>{% endif %}
             {% for field in form %}
+                {% if field.name != 'continue_duplicate' %}
                 <div class="form-field">
                     <label for="{{ field.id_for_label }}">{{ field.label|upper }}</label>
                     {{ field }}
                     {% if field.help_text %}<p class="help-text">{{ field.help_text }}</p>{% endif %}
                     {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
                 </div>
+                {% endif %}
             {% endfor %}
+
+            {% if duplicate_analysis.has_candidates %}
+            <section class="panel intake-orchestration-alert {% if duplicate_analysis.blocking %}intake-orchestration-manual{% else %}intake-orchestration-fallback{% endif %}">
+                <div>
+                    <p class="eyebrow">DUPLICATE PREFLIGHT</p>
+                    <h2>{% if duplicate_analysis.blocking %}EXTRACTION PAUSED FOR AN EXACT MATCH.{% else %}A SIMILAR TRACKED ROLE WAS FOUND.{% endif %}</h2>
+                    <p>Open the existing record before deciding whether this listing should continue as a separate opportunity.</p>
+                    <ul>
+                        {% for candidate in duplicate_analysis.candidates %}
+                        <li>
+                            <a class="text-link" href="{% url 'job_detail' candidate.job_id %}" target="_blank" rel="noopener noreferrer">{{ candidate.title }} at {{ candidate.company }}</a>
+                            — {{ candidate.reason_label }}{% if candidate.location %} · {{ candidate.location }}{% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% if duplicate_analysis.blocking %}<strong>NO EXTRACTION REQUEST MADE</strong>{% endif %}
+            </section>
+
+            {% if duplicate_analysis.blocking %}
+            <div class="form-field">
+                <label for="{{ form.continue_duplicate.id_for_label }}">{{ form.continue_duplicate.label|upper }}</label>
+                {{ form.continue_duplicate }}
+                {% if form.continue_duplicate.help_text %}<p class="help-text">{{ form.continue_duplicate.help_text }}</p>{% endif %}
+                {% for error in form.continue_duplicate.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+            {% endif %}
+            {% endif %}
+
             <div class="form-actions">
                 <button class="button button-primary" type="submit">CREATE REVIEW DRAFT</button>
                 <a class="text-link" href="{% url 'job_list' %}">CANCEL</a>

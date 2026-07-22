@@ -1,6 +1,8 @@
 from django import forms
 from django.db import transaction
 
+from intake_history.services import record_extraction_run
+
 from .forms import normalize_line_list
 from .models import JobPosting, JobRequirement
 
@@ -29,6 +31,14 @@ class JobIntakePasteForm(forms.Form):
                     "location, responsibilities, qualifications, and deadline when available."
                 ),
             }
+        ),
+    )
+    continue_duplicate = forms.BooleanField(
+        required=False,
+        label="I reviewed the existing record and still want to run extraction.",
+        help_text=(
+            "Exact URL or listing-text matches are stopped before extraction until "
+            "you explicitly continue."
         ),
     )
 
@@ -80,6 +90,20 @@ class JobIntakeReviewForm(forms.Form):
     )
     hard_disqualifiers = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 4}))
     requirement_notes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 4}))
+    confirm_duplicate = forms.BooleanField(
+        required=False,
+        label="Create a separate job despite the exact duplicate warning.",
+        help_text=(
+            "Use this only when the listing is intentionally a separate opening or "
+            "a new version that should remain distinct."
+        ),
+    )
+
+    def __init__(self, *args, duplicate_analysis=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.duplicate_analysis = duplicate_analysis or {}
+        if not self.duplicate_analysis.get("blocking"):
+            self.fields.pop("confirm_duplicate", None)
 
     def clean(self):
         cleaned_data = super().clean()
@@ -102,10 +126,22 @@ class JobIntakeReviewForm(forms.Form):
         for field_name in self.LIST_FIELDS:
             cleaned_data[field_name] = normalize_line_list(cleaned_data.get(field_name, ""))
 
+        if (
+            self.duplicate_analysis.get("blocking")
+            and not cleaned_data.get("confirm_duplicate")
+        ):
+            self.add_error(
+                "confirm_duplicate",
+                (
+                    "Review the matching job record and confirm that this should be "
+                    "created as a separate tracked opportunity."
+                ),
+            )
+
         return cleaned_data
 
     @transaction.atomic
-    def save(self):
+    def save(self, *, intake_draft):
         data = self.cleaned_data
         job = JobPosting.objects.create(
             title=data["title"],
@@ -123,7 +159,8 @@ class JobIntakeReviewForm(forms.Form):
             description=data.get("description", ""),
             notes=(
                 "Created from a reviewed Stage 4 intake draft. "
-                "Listing availability and extracted requirements still require human verification."
+                "Listing availability and extracted requirements still require human verification. "
+                "The original source and extraction provenance are retained in intake history."
             ),
         )
         JobRequirement.objects.create(
@@ -142,5 +179,11 @@ class JobIntakeReviewForm(forms.Form):
             work_authorization_requirements=data.get("work_authorization_requirements", ""),
             hard_disqualifiers=data.get("hard_disqualifiers", ""),
             requirement_notes=data.get("requirement_notes", ""),
+        )
+        record_extraction_run(
+            job=job,
+            intake_draft=intake_draft,
+            reviewed_data=data,
+            duplicate_analysis=self.duplicate_analysis,
         )
         return job
