@@ -1,0 +1,27 @@
+Amiri Prescod
+amiri@example.com | +1 610-555-0100 | github.com/aprescod12
+
+Professional Summary
+Electrical engineer pursuing graduate study in biomedical engineering.
+
+Education
+Villanova University
+B.S. Electrical Engineering | 2025
+M.S. Biomedical Engineering Candidate | 2027
+
+Experience
+Engineering Intern
+Medical Device Company | Summer 2025
+Developed and tested embedded sensing prototypes.
+
+Projects
+Wearable Sensing Platform
+Python, signal processing, embedded systems
+Built a prototype for physiological data collection.
+
+Technical Skills
+Python, MATLAB, C, Embedded systems, Test and validation
+
+Leadership and Activities
+Student-Athlete
+Villanova Track and Field
