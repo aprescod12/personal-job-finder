@@ -1,5 +1,6 @@
 import json
 import os
+from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -213,10 +214,7 @@ class OpenAIResumeBackendRequestTests(TestCase):
         self.assertEqual(api_request["timeout"], 19)
         self.assertEqual(api_request["max_output_tokens"], 3200)
         self.assertEqual(api_request["text"]["format"]["type"], "json_schema")
-        self.assertEqual(
-            api_request["text"]["format"]["name"],
-            AI_RESUME_SCHEMA_NAME,
-        )
+        self.assertEqual(api_request["text"]["format"]["name"], AI_RESUME_SCHEMA_NAME)
         self.assertEqual(
             api_request["text"]["format"]["schema"],
             AI_RESUME_EXTRACTION_JSON_SCHEMA,
@@ -274,6 +272,7 @@ class OpenAIResumeBackendRequestTests(TestCase):
                 output=[SimpleNamespace(content=[refusal])],
             )
         )
+
         with self.assertRaisesMessage(ResumeExtractionError, "declined") as context:
             OpenAIResumeResponsesBackend(client=client).generate_structured(
                 schema_name="test_schema",
@@ -291,6 +290,7 @@ class OpenAIResumeBackendRequestTests(TestCase):
                 output=[],
             )
         )
+
         with self.assertRaisesMessage(
             ResumeExtractionError,
             "status: incomplete",
@@ -308,6 +308,7 @@ class OpenAIResumeBackendRequestTests(TestCase):
         client = RecordingClient(
             error=AuthenticationError("secret provider response body")
         )
+
         with self.assertRaisesMessage(
             ResumeExtractionError,
             "authentication failed",
@@ -322,7 +323,8 @@ class OpenAIResumeBackendRequestTests(TestCase):
 
 
 class StructuredAIResumeValidationTests(TestCase):
-    def extractor_for(self, payload):
+    @staticmethod
+    def extractor_for(payload):
         class FakeBackend:
             def generate_structured(self, **kwargs):
                 return payload
@@ -334,6 +336,9 @@ class StructuredAIResumeValidationTests(TestCase):
             def generate_structured(self, **kwargs):
                 return valid_payload()
 
+        profile_count_before = CareerProfile.objects.count()
+        source_count_before = ResumeSource.objects.count()
+
         result = extract_resume(
             request_for_resume(),
             extractor=OpenAIResumeExtractor(backend=FakeBackend()),
@@ -343,11 +348,11 @@ class StructuredAIResumeValidationTests(TestCase):
         self.assertEqual(result["provider"]["mode"], "ai")
         self.assertEqual(result["identity"]["full_name"], "Amiri Prescod")
         self.assertIn("Python", result["profile"]["skills"])
-        self.assertEqual(CareerProfile.objects.count(), 0)
-        self.assertEqual(ResumeSource.objects.count(), 0)
+        self.assertEqual(CareerProfile.objects.count(), profile_count_before)
+        self.assertEqual(ResumeSource.objects.count(), source_count_before)
 
     def test_hallucinated_skill_is_rejected_by_grounding_validation(self):
-        payload = valid_payload()
+        payload = deepcopy(valid_payload())
         payload["profile"]["skills"].append("Rust")
 
         with self.assertRaisesMessage(
@@ -358,7 +363,7 @@ class StructuredAIResumeValidationTests(TestCase):
         self.assertEqual(context.exception.category, ERROR_INVALID_RESPONSE)
 
     def test_hallucinated_entry_source_is_rejected(self):
-        payload = valid_payload()
+        payload = deepcopy(valid_payload())
         payload["profile"]["experience"][0]["source_text"] = (
             "Invented Principal Engineer experience"
         )
@@ -370,7 +375,7 @@ class StructuredAIResumeValidationTests(TestCase):
             self.extractor_for(payload).extract(request_for_resume())
 
     def test_extra_payload_key_is_rejected(self):
-        payload = valid_payload()
+        payload = deepcopy(valid_payload())
         payload["profile"]["target_role"] = "Biomedical Engineer"
 
         with self.assertRaisesMessage(
