@@ -1,0 +1,46 @@
+{% extends "tracker/base.html" %}
+{% load static %}
+
+{% block title %}Remove Resume Source · Amiri's Job Finder{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'candidate_profile/resume_sources.css' %}">
+
+<p><a class="text-link" href="{% url 'candidate_profile:resume_source_list' %}">← BACK TO RESUME SOURCES</a></p>
+
+<section class="page-heading compact">
+    <div>
+        <p class="eyebrow">STAGE 05 / DESTRUCTIVE ACTION</p>
+        <h1>REMOVE THIS RESUME SOURCE?</h1>
+        <p class="muted">This deletes the stored source record and its uploaded file. It does not alter the structured career profile.</p>
+    </div>
+</section>
+
+<section class="panel resume-delete-panel">
+    <div>
+        <p class="eyebrow">SOURCE TO REMOVE</p>
+        <h2>{{ source.display_label }}</h2>
+        <p>{{ source.original_filename }} · {{ source.file_size|filesizeformat }}</p>
+        <dl>
+            <div><dt>STATUS</dt><dd>{% if source.is_active %}Active resume source{% else %}Stored version{% endif %}</dd></div>
+            <div><dt>FINGERPRINT</dt><dd>{{ source.short_fingerprint }}</dd></div>
+            <div><dt>STORED</dt><dd>{{ source.created_at|date:"M j, Y, g:i a" }}</dd></div>
+        </dl>
+    </div>
+
+    <div class="resume-delete-warning">
+        <strong>THIS CANNOT BE UNDONE.</strong>
+        {% if source.is_active %}
+        <p>Removing the active source will leave no active resume. An older version will not be selected automatically.</p>
+        {% else %}
+        <p>The current active resume will remain unchanged.</p>
+        {% endif %}
+    </div>
+
+    <form method="post" class="resume-delete-actions">
+        {% csrf_token %}
+        <button class="button button-danger" type="submit">REMOVE RESUME PERMANENTLY</button>
+        <a class="button button-secondary" href="{% url 'candidate_profile:resume_source_list' %}">CANCEL</a>
+    </form>
+</section>
+{% endblock %}
