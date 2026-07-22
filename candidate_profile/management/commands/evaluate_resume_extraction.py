@@ -4,6 +4,7 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 
 from candidate_profile.services.resume_extraction_evaluation import (
+    DEFAULT_CASES_ROOT,
     ResumeEvaluationError,
     run_evaluation,
 )
@@ -23,8 +24,9 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        cases_root = options.get("cases_root") or DEFAULT_CASES_ROOT
         try:
-            report = run_evaluation(options.get("cases_root") or None)
+            report = run_evaluation(cases_root)
         except ResumeEvaluationError as exc:
             raise CommandError(str(exc)) from exc
 
