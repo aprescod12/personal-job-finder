@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from collections.abc import Mapping, Sequence
 from typing import Any, Protocol
 
@@ -15,7 +16,7 @@ from .resume_extraction import (
 
 AI_RESUME_SCHEMA_NAME = "resume_profile_extraction"
 AI_RESUME_SCHEMA_VERSION = "resume-extraction-schema-v1"
-AI_RESUME_EXTRACTOR_VERSION = "structured-ai-resume-extractor-v1"
+AI_RESUME_EXTRACTOR_VERSION = "structured-ai-resume-extractor-v2"
 
 _ENTRY_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -116,8 +117,9 @@ Rules:
 6. For education, experience, projects, certifications, and leadership, keep each visible entry separate.
 7. Every source_text value must be a short verbatim excerpt from the supplied resume.
 8. Every non-empty identity value, link, skill, detail, heading, subheading, and date must be grounded in the supplied resume.
-9. Evidence must identify the schema field, include a short verbatim excerpt, and explain why it supports the field.
-10. Return only data matching the supplied JSON schema.
+9. For each structured entry, include its heading, subheading, dates, and details inside source_text whenever the resume layout permits it.
+10. Evidence must identify the schema field, include a short verbatim excerpt, and explain why it supports the field.
+11. Return only data matching the supplied JSON schema.
 """.strip()
 
 
@@ -212,8 +214,23 @@ def _require_string_list(value: Any, field_name: str) -> list[str]:
 
 
 def _normalized_grounding_text(value: str) -> str:
-    value = value.replace("\u00a0", " ")
+    value = unicodedata.normalize("NFKC", value.replace("\u00a0", " "))
     return re.sub(r"\s+", " ", value).strip().casefold()
+
+
+def _compact_grounding_text(value: str) -> str:
+    return re.sub(r"[^\w]+", "", _normalized_grounding_text(value), flags=re.UNICODE)
+
+
+def _is_grounded_text(value: str, source_text: str) -> bool:
+    normalized_value = _normalized_grounding_text(value)
+    normalized_source = _normalized_grounding_text(source_text)
+    if normalized_value and normalized_value in normalized_source:
+        return True
+
+    compact_value = _compact_grounding_text(value)
+    compact_source = _compact_grounding_text(source_text)
+    return bool(compact_value and compact_value in compact_source)
 
 
 def _require_grounded_text(
@@ -226,11 +243,28 @@ def _require_grounded_text(
     if not text:
         return ""
 
-    normalized_text = _normalized_grounding_text(text)
-    normalized_source = _normalized_grounding_text(source_text)
-    if normalized_text not in normalized_source:
+    if not _is_grounded_text(text, source_text):
         raise _invalid(
             f"AI field '{field_name}' is not grounded in the supplied resume text."
+        )
+    return text
+
+
+def _require_verbatim_source_text(
+    value: Any,
+    *,
+    field_name: str,
+    document_text: str,
+) -> str:
+    text = _require_string(value, field_name)
+    if not text:
+        return ""
+
+    normalized_text = _normalized_grounding_text(text)
+    normalized_document = _normalized_grounding_text(document_text)
+    if normalized_text not in normalized_document:
+        raise _invalid(
+            f"AI field '{field_name}' is not a verbatim excerpt from the supplied resume text."
         )
     return text
 
@@ -252,11 +286,26 @@ def _require_grounded_string_list(
     ]
 
 
+def _append_excerpt_warning(
+    warnings: list[str],
+    *,
+    field_name: str,
+    value: str,
+    source_excerpt: str,
+) -> None:
+    if value and not _is_grounded_text(value, source_excerpt):
+        warnings.append(
+            f"Review evidence for {field_name}: the claim is grounded in the full "
+            "resume, but the selected source excerpt does not contain it."
+        )
+
+
 def _validate_entries(
     value: Any,
     *,
     field_name: str,
     document_text: str,
+    validation_warnings: list[str],
 ) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         raise _invalid(f"AI field '{field_name}' must be a list.")
@@ -268,36 +317,67 @@ def _validate_entries(
         entry = _require_mapping(item, item_name)
         _require_exact_keys(entry, field_name=item_name, expected=expected)
 
-        source_excerpt = _require_grounded_text(
+        source_excerpt = _require_verbatim_source_text(
             entry["source_text"],
             field_name=f"{item_name}.source_text",
-            source_text=document_text,
+            document_text=document_text,
         )
         if not source_excerpt:
             raise _invalid(f"AI field '{item_name}.source_text' cannot be blank.")
 
+        heading = _require_grounded_text(
+            entry["heading"],
+            field_name=f"{item_name}.heading",
+            source_text=document_text,
+        )
+        subheading = _require_grounded_text(
+            entry["subheading"],
+            field_name=f"{item_name}.subheading",
+            source_text=document_text,
+        )
+        dates = _require_grounded_text(
+            entry["dates"],
+            field_name=f"{item_name}.dates",
+            source_text=document_text,
+        )
+        details = _require_grounded_string_list(
+            entry["details"],
+            field_name=f"{item_name}.details",
+            source_text=document_text,
+        )
+
+        _append_excerpt_warning(
+            validation_warnings,
+            field_name=f"{item_name}.heading",
+            value=heading,
+            source_excerpt=source_excerpt,
+        )
+        _append_excerpt_warning(
+            validation_warnings,
+            field_name=f"{item_name}.subheading",
+            value=subheading,
+            source_excerpt=source_excerpt,
+        )
+        _append_excerpt_warning(
+            validation_warnings,
+            field_name=f"{item_name}.dates",
+            value=dates,
+            source_excerpt=source_excerpt,
+        )
+        for detail_index, detail in enumerate(details):
+            _append_excerpt_warning(
+                validation_warnings,
+                field_name=f"{item_name}.details[{detail_index}]",
+                value=detail,
+                source_excerpt=source_excerpt,
+            )
+
         entries.append(
             {
-                "heading": _require_grounded_text(
-                    entry["heading"],
-                    field_name=f"{item_name}.heading",
-                    source_text=source_excerpt,
-                ),
-                "subheading": _require_grounded_text(
-                    entry["subheading"],
-                    field_name=f"{item_name}.subheading",
-                    source_text=source_excerpt,
-                ),
-                "dates": _require_grounded_text(
-                    entry["dates"],
-                    field_name=f"{item_name}.dates",
-                    source_text=source_excerpt,
-                ),
-                "details": _require_grounded_string_list(
-                    entry["details"],
-                    field_name=f"{item_name}.details",
-                    source_text=source_excerpt,
-                ),
+                "heading": heading,
+                "subheading": subheading,
+                "dates": dates,
+                "details": details,
                 "source_text": source_excerpt,
             }
         )
@@ -325,10 +405,10 @@ def _validate_evidence(
                     f"{item_name}.field",
                     _EVIDENCE_FIELDS,
                 ),
-                "source_text": _require_grounded_text(
+                "source_text": _require_verbatim_source_text(
                     evidence["source_text"],
                     field_name=f"{item_name}.source_text",
-                    source_text=document_text,
+                    document_text=document_text,
                 ),
                 "note": _require_string(evidence["note"], f"{item_name}.note"),
             }
@@ -349,6 +429,7 @@ def validate_ai_resume_payload(
     )
 
     document_text = request.document_text
+    validation_warnings: list[str] = []
     identity_payload = _require_mapping(root["identity"], "identity")
     _require_exact_keys(
         identity_payload,
@@ -404,16 +485,19 @@ def validate_ai_resume_payload(
             profile_payload["education"],
             field_name="profile.education",
             document_text=document_text,
+            validation_warnings=validation_warnings,
         ),
         "experience": _validate_entries(
             profile_payload["experience"],
             field_name="profile.experience",
             document_text=document_text,
+            validation_warnings=validation_warnings,
         ),
         "projects": _validate_entries(
             profile_payload["projects"],
             field_name="profile.projects",
             document_text=document_text,
+            validation_warnings=validation_warnings,
         ),
         "skills": _require_grounded_string_list(
             profile_payload["skills"],
@@ -424,16 +508,22 @@ def validate_ai_resume_payload(
             profile_payload["certifications"],
             field_name="profile.certifications",
             document_text=document_text,
+            validation_warnings=validation_warnings,
         ),
         "leadership": _validate_entries(
             profile_payload["leadership"],
             field_name="profile.leadership",
             document_text=document_text,
+            validation_warnings=validation_warnings,
         ),
     }
 
     evidence = _validate_evidence(root["evidence"], document_text=document_text)
-    warnings = _require_string_list(root["warnings"], "warnings")
+    provider_warnings = _require_string_list(root["warnings"], "warnings")
+    warnings = _require_string_list(
+        [*provider_warnings, *validation_warnings],
+        "warnings",
+    )
     return identity, profile, evidence, warnings
 
 
