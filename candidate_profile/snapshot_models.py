@@ -56,7 +56,7 @@ class CandidateProfileSnapshot(models.Model):
             ),
             models.Index(
                 fields=["fingerprint"],
-                name="candidate_snapshot_fingerprint_idx",
+                name="candidate_snapshot_fp_idx",
             ),
         ]
         verbose_name = "candidate profile snapshot"
