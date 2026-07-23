@@ -1,16 +1,16 @@
 """Career-strategy layer applied on top of the transparent base matcher.
 
-The base matcher remains responsible for evidence extraction and category-level
-comparison. This module applies Amiri's calibrated search strategy:
-
-- entering the medical-device industry is more important than an exact title;
-- medical-device product development remains the preferred function;
-- technical functions surrounding development receive transferable credit;
-- unrelated commercial functions do not receive technical credit solely because
-  they are inside a target industry.
+The matcher combines manually maintained search preferences with an explicitly
+activated, provenance-backed candidate-profile snapshot. Draft snapshots never
+influence matching.
 """
 
 from __future__ import annotations
+
+from candidate_profile.services.candidate_profile_composition import (
+    ActivatedCandidateProfileAdapter,
+    effective_matching_profile,
+)
 
 from .matching import (
     CategoryScore,
@@ -23,7 +23,7 @@ from .matching import (
 )
 
 
-MATCHER_VERSION = "2.1-industry-first"
+MATCHER_VERSION = "2.2-activated-candidate-snapshot"
 
 CATEGORY_WEIGHTS = {
     "role": 10,
@@ -36,9 +36,6 @@ CATEGORY_WEIGHTS = {
     "employment_type": 5,
 }
 
-# These functions can provide a credible first step into medical-device product
-# development. They receive related-role credit only when the job is also inside
-# a target or closely related industry.
 TECHNICAL_MEDTECH_ENTRY_TERMS = (
     "product safety",
     "electrical safety",
@@ -234,8 +231,6 @@ def _reclassify_track(
     transferable_role,
 ):
     if not industry_available:
-        # Missing industry evidence should not erase a clear role relationship,
-        # but it should remain a prompt to complete the requirements record.
         return
 
     if industry_fraction < RELATED_INDUSTRY_THRESHOLD:
@@ -259,11 +254,26 @@ def _reclassify_track(
     result.track = "OUTSIDE PRIORITY"
 
 
+def _attach_snapshot_metadata(result, matching_profile):
+    if isinstance(matching_profile, ActivatedCandidateProfileAdapter):
+        result.candidate_snapshot_id = matching_profile.candidate_snapshot_id
+        result.candidate_snapshot_version = matching_profile.candidate_snapshot_version
+        result.candidate_snapshot_composition_version = (
+            matching_profile.candidate_snapshot_composition_version
+        )
+    else:
+        result.candidate_snapshot_id = None
+        result.candidate_snapshot_version = None
+        result.candidate_snapshot_composition_version = ""
+
+
 def analyze_job_match(profile, job, requirements):
     """Return a transparent match result calibrated to industry-first entry."""
 
-    result = analyze_base_job_match(profile, job, requirements)
+    matching_profile = effective_matching_profile(profile)
+    result = analyze_base_job_match(matching_profile, job, requirements)
     result.matcher_version = MATCHER_VERSION
+    _attach_snapshot_metadata(result, matching_profile)
     if not result.has_requirements:
         return result
 
