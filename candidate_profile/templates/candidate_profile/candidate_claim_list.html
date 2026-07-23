@@ -26,9 +26,12 @@
     <div>
         <p class="eyebrow">PROFILE BOUNDARY</p>
         <h2>{{ profile.full_name|upper }}</h2>
-        <p>Manual career-profile fields are still controlled on the Career Profile page. This page shows only approved résumé-derived evidence.</p>
+        <p>Manual career preferences remain controlled on the Career Profile page. Compose these approved résumé facts into a versioned snapshot before they can affect job matching.</p>
     </div>
-    <a class="button button-primary" href="{% url 'career_profile' %}">OPEN MANUAL CAREER PROFILE</a>
+    <div class="resume-extraction-actions">
+        <a class="button button-primary" href="{% url 'candidate_profile:candidate_snapshot_list' %}">COMPOSE / VIEW PROFILE VERSIONS</a>
+        <a class="button button-secondary" href="{% url 'career_profile' %}">OPEN MANUAL CAREER PROFILE</a>
+    </div>
 </section>
 
 {% for group in claim_groups %}
