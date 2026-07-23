@@ -11,7 +11,7 @@ from pypdf import PdfWriter
 
 from tracker.models import CareerProfile
 
-from .models import ResumeSource
+from .models import ResumeExtractionReview, ResumeSource
 from .services.resume_deterministic import DeterministicResumeExtractor
 from .services.resume_documents import (
     ResumeDocumentError,
@@ -198,6 +198,11 @@ class ResumeDocumentReaderTests(TestCase):
             extract_resume_document_text(source)
 
 
+@override_settings(
+    RESUME_EXTRACTOR=(
+        "candidate_profile.services.resume_deterministic.DeterministicResumeExtractor"
+    )
+)
 class ResumeExtractionWorkflowTests(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -233,6 +238,14 @@ class ResumeExtractionWorkflowTests(TestCase):
             is_active=True,
         )
 
+    def _extract(self):
+        return self.client.post(
+            reverse(
+                "candidate_profile:run_resume_extraction",
+                args=[self.source.id],
+            )
+        )
+
     def test_extraction_endpoint_requires_post(self):
         response = self.client.get(
             reverse(
@@ -244,76 +257,55 @@ class ResumeExtractionWorkflowTests(TestCase):
         self.assertEqual(response.status_code, 405)
         self.assertNotIn(RESUME_EXTRACTION_SESSION_KEY, self.client.session)
 
-    def test_extraction_creates_session_draft_without_changing_profile_or_source(self):
+    def test_extraction_creates_persistent_review_without_changing_profile(self):
         profile_before = {
             "professional_headline": self.profile.professional_headline,
             "skills": self.profile.skills,
             "updated_at": self.profile.updated_at,
         }
-        source_before = {
-            "review_status": self.source.review_status,
-            "updated_at": self.source.updated_at,
-        }
 
-        response = self.client.post(
-            reverse(
-                "candidate_profile:run_resume_extraction",
-                args=[self.source.id],
-            )
-        )
+        response = self._extract()
 
         self.assertRedirects(
             response,
             reverse("candidate_profile:resume_extraction_review"),
         )
-        draft = self.client.session[RESUME_EXTRACTION_SESSION_KEY]
-        self.assertEqual(draft["source"]["id"], self.source.id)
+        session_value = self.client.session[RESUME_EXTRACTION_SESSION_KEY]
+        review = ResumeExtractionReview.objects.get(id=session_value["review_id"])
+        self.assertEqual(review.source_id, self.source.id)
+        self.assertEqual(review.source_sha256, self.source.sha256)
         self.assertEqual(
-            draft["source"]["sha256"],
-            self.source.sha256,
-        )
-        self.assertEqual(
-            draft["extraction"]["identity"]["full_name"],
+            review.claims.get(claim_key="identity.full_name").reviewed_value,
             "Amiri Prescod",
         )
+        self.assertTrue(review.claims.exists())
 
         self.profile.refresh_from_db()
-        self.source.refresh_from_db()
         self.assertEqual(
             self.profile.professional_headline,
             profile_before["professional_headline"],
         )
         self.assertEqual(self.profile.skills, profile_before["skills"])
         self.assertEqual(self.profile.updated_at, profile_before["updated_at"])
-        self.assertEqual(self.source.review_status, source_before["review_status"])
-        self.assertEqual(self.source.updated_at, source_before["updated_at"])
 
-    def test_review_page_discloses_read_only_boundary(self):
-        self.client.post(
-            reverse(
-                "candidate_profile:run_resume_extraction",
-                args=[self.source.id],
-            )
-        )
+    def test_review_page_discloses_controlled_persistence_boundary(self):
+        self._extract()
 
         response = self.client.get(
             reverse("candidate_profile:resume_extraction_review")
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "PROFILE UNCHANGED")
+        self.assertContains(response, "MANUAL PROFILE UNCHANGED")
         self.assertContains(response, "Deterministic local resume parser")
         self.assertContains(response, "Amiri Prescod")
-        self.assertContains(response, "REVIEW ONLY")
+        self.assertContains(response, "SAVE REVIEW ONLY")
+        self.assertContains(response, "APPLY APPROVED CLAIMS")
         self.assertNotContains(response, "APPLY TO PROFILE")
 
-    def test_discard_removes_only_session_draft(self):
-        self.client.post(
-            reverse(
-                "candidate_profile:run_resume_extraction",
-                args=[self.source.id],
-            )
-        )
+    def test_close_marks_review_discarded_and_keeps_resume_source(self):
+        self._extract()
+        review_id = self.client.session[RESUME_EXTRACTION_SESSION_KEY]["review_id"]
 
         response = self.client.post(
             reverse("candidate_profile:clear_resume_extraction")
@@ -325,8 +317,10 @@ class ResumeExtractionWorkflowTests(TestCase):
         )
         self.assertNotIn(RESUME_EXTRACTION_SESSION_KEY, self.client.session)
         self.assertTrue(ResumeSource.objects.filter(id=self.source.id).exists())
+        review = ResumeExtractionReview.objects.get(id=review_id)
+        self.assertEqual(review.status, ResumeExtractionReview.Status.DISCARDED)
 
-    def test_unreadable_source_does_not_create_draft(self):
+    def test_unreadable_source_does_not_create_review(self):
         self.source.document.delete(save=False)
         blank_content = b"   \n\n"
         self.source.document = SimpleUploadedFile(
@@ -339,15 +333,11 @@ class ResumeExtractionWorkflowTests(TestCase):
         self.source.sha256 = hashlib.sha256(blank_content).hexdigest()
         self.source.save()
 
-        response = self.client.post(
-            reverse(
-                "candidate_profile:run_resume_extraction",
-                args=[self.source.id],
-            )
-        )
+        response = self._extract()
 
         self.assertRedirects(
             response,
             reverse("candidate_profile:resume_source_list"),
         )
         self.assertNotIn(RESUME_EXTRACTION_SESSION_KEY, self.client.session)
+        self.assertFalse(ResumeExtractionReview.objects.exists())

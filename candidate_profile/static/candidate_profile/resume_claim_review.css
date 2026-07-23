@@ -1,0 +1,228 @@
+.resume-review-status {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(100px, 1fr)) auto;
+    align-items: stretch;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.resume-review-status > div {
+    display: grid;
+    gap: 0.35rem;
+    border: 2px solid var(--ink);
+    background: #fff;
+    padding: 0.9rem;
+}
+
+.resume-review-status span,
+.resume-review-claim-heading span,
+.resume-review-decision label,
+.resume-review-claim-heading b {
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.resume-review-status strong {
+    font-size: 1.65rem;
+}
+
+.resume-review-status > a {
+    align-self: center;
+}
+
+.resume-review-form {
+    display: grid;
+    gap: 1rem;
+}
+
+.resume-review-section {
+    margin-bottom: 0;
+}
+
+.resume-review-claim-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.resume-review-claim {
+    display: grid;
+    gap: 1rem;
+    border: 3px solid var(--ink);
+    background: #fff;
+    box-shadow: 5px 5px 0 var(--ink);
+    padding: 1rem;
+}
+
+.resume-review-claim-applied {
+    border-color: var(--violet);
+    box-shadow: 5px 5px 0 var(--violet);
+    background: #f6f3ff;
+}
+
+.resume-review-claim-heading {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 0.7rem;
+}
+
+.resume-review-claim-heading > div {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.resume-review-claim-heading b {
+    border: 2px solid var(--ink);
+    background: var(--lime);
+    color: var(--ink);
+    padding: 0.35rem 0.5rem;
+}
+
+.resume-review-decision {
+    display: grid;
+    grid-template-columns: minmax(120px, 180px) minmax(180px, 280px);
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.resume-review-decision select,
+.resume-review-entry-fields input,
+.resume-review-entry-fields textarea,
+.resume-review-claim textarea {
+    width: 100%;
+    border: 2px solid var(--ink);
+    background: #fff;
+    padding: 0.7rem;
+    color: var(--ink);
+    font: inherit;
+}
+
+.resume-review-decision select:disabled,
+.resume-review-entry-fields input:disabled,
+.resume-review-entry-fields textarea:disabled,
+.resume-review-claim textarea:disabled {
+    background: #ececf2;
+    color: var(--muted);
+}
+
+.resume-review-entry-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.resume-review-details-field {
+    grid-column: 1 / -1;
+}
+
+.resume-claim-evidence {
+    border-left: 5px solid var(--violet);
+    background: #f8f8fb;
+    padding: 0.8rem;
+}
+
+.resume-claim-evidence summary {
+    cursor: pointer;
+    font-weight: 950;
+    letter-spacing: 0.06em;
+}
+
+.resume-claim-evidence p {
+    margin: 0.75rem 0 0;
+    white-space: normal;
+}
+
+.resume-claim-evidence small,
+.resume-claim-evidence > span {
+    display: block;
+    margin-top: 0.55rem;
+    color: var(--muted);
+    font-size: 0.74rem;
+}
+
+.resume-review-close {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1rem;
+    border-color: var(--danger);
+}
+
+.resume-review-close p:last-child {
+    margin-bottom: 0;
+}
+
+.candidate-claim-summary {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.candidate-claim-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.candidate-claim-card {
+    display: grid;
+    gap: 0.55rem;
+    border: 2px solid var(--ink);
+    background: #fff;
+    padding: 1rem;
+}
+
+.candidate-claim-card h3,
+.candidate-claim-card p {
+    margin: 0;
+}
+
+.candidate-claim-card dl {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0.5rem 0 0;
+}
+
+.candidate-claim-card dl div {
+    border-top: 2px solid var(--ink);
+    padding-top: 0.55rem;
+}
+
+.candidate-claim-card dt {
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+}
+
+.candidate-claim-card dd {
+    overflow-wrap: anywhere;
+    margin: 0.25rem 0 0;
+}
+
+@media (max-width: 900px) {
+    .resume-review-status,
+    .resume-review-entry-fields,
+    .candidate-claim-card dl {
+        grid-template-columns: 1fr;
+    }
+
+    .resume-review-decision {
+        grid-template-columns: 1fr;
+    }
+
+    .resume-review-close,
+    .candidate-claim-summary {
+        align-items: stretch;
+        flex-direction: column;
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,19 +1,76 @@
+from collections import OrderedDict
+
 from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
 from tracker.models import CareerProfile
 
-from .forms import ResumeSourceUploadForm
-from .models import ResumeSource
+from .forms import ResumeReviewClaimForm, ResumeSourceUploadForm
+from .models import (
+    CandidateProfileClaim,
+    ResumeExtractionReview,
+    ResumeReviewClaim,
+    ResumeSource,
+)
+from .services.resume_claim_review import (
+    apply_approved_claims,
+    close_resume_review,
+    create_resume_review,
+)
 from .services.resume_documents import ResumeDocumentError, extract_resume_document_text
 from .services.resume_extraction import ResumeExtractionError, ResumeExtractionRequest
 from .services.resume_extraction_coordinator import extract_resume_with_fallback
 
 
 RESUME_EXTRACTION_SESSION_KEY = "stage5_resume_extraction_draft"
+SECTION_ORDER = (
+    ResumeReviewClaim.Section.IDENTITY,
+    ResumeReviewClaim.Section.SUMMARY,
+    ResumeReviewClaim.Section.EDUCATION,
+    ResumeReviewClaim.Section.EXPERIENCE,
+    ResumeReviewClaim.Section.PROJECTS,
+    ResumeReviewClaim.Section.SKILLS,
+    ResumeReviewClaim.Section.CERTIFICATIONS,
+    ResumeReviewClaim.Section.LEADERSHIP,
+)
+
+
+def _session_review_id(request):
+    value = request.session.get(RESUME_EXTRACTION_SESSION_KEY)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, dict):
+        return value.get("review_id")
+    return None
+
+
+def _active_session_review(request):
+    review_id = _session_review_id(request)
+    if not review_id:
+        return None
+    review = ResumeExtractionReview.objects.filter(pk=review_id).first()
+    if review is None:
+        request.session.pop(RESUME_EXTRACTION_SESSION_KEY, None)
+    return review
+
+
+def _group_claim_forms(claims, forms):
+    grouped = OrderedDict(
+        (
+            section,
+            {
+                "key": section,
+                "label": dict(ResumeReviewClaim.Section.choices)[section],
+                "items": [],
+            },
+        )
+        for section in SECTION_ORDER
+    )
+    for claim, form in zip(claims, forms):
+        grouped[claim.section]["items"].append({"claim": claim, "form": form})
+    return [group for group in grouped.values() if group["items"]]
 
 
 def resume_source_list(request):
@@ -40,6 +97,7 @@ def resume_source_list(request):
 
     sources = profile.resume_sources.all()
     active_source = sources.filter(is_active=True).first()
+    session_review = _active_session_review(request)
     return render(
         request,
         "candidate_profile/resume_source_list.html",
@@ -48,7 +106,11 @@ def resume_source_list(request):
             "form": form,
             "sources": sources,
             "active_source": active_source,
-            "has_extraction_draft": RESUME_EXTRACTION_SESSION_KEY in request.session,
+            "session_review": session_review,
+            "has_extraction_draft": bool(session_review and session_review.is_open),
+            "approved_claim_count": profile.approved_resume_claims.filter(
+                is_active=True
+            ).count(),
         },
     )
 
@@ -70,7 +132,7 @@ def activate_resume_source(request, source_id):
         request,
         (
             f"Active resume source changed to {source.display_label}. "
-            "This still does not update the structured career profile."
+            "Approved claims remain unchanged until a new review is explicitly applied."
         ),
     )
     return redirect("candidate_profile:resume_source_list")
@@ -96,8 +158,8 @@ def delete_resume_source(request, source_id):
     storage = source.document.storage
     stored_name = source.document.name
 
-    draft = request.session.get(RESUME_EXTRACTION_SESSION_KEY, {})
-    if draft.get("source", {}).get("id") == source.id:
+    review = _active_session_review(request)
+    if review and review.source_id == source.id:
         request.session.pop(RESUME_EXTRACTION_SESSION_KEY, None)
 
     with transaction.atomic():
@@ -108,10 +170,14 @@ def delete_resume_source(request, source_id):
     if was_active:
         message = (
             f"Resume source removed: {display_label}. No resume is active now; "
-            "choose another stored version explicitly before future extraction."
+            "choose another stored version explicitly before future extraction. "
+            "Previously approved claims retain their provenance snapshot."
         )
     else:
-        message = f"Resume source removed: {display_label}."
+        message = (
+            f"Resume source removed: {display_label}. Previously approved claims retain "
+            "their provenance snapshot."
+        )
 
     messages.success(request, message)
     return redirect("candidate_profile:resume_source_list")
@@ -134,87 +200,194 @@ def run_resume_extraction(request, source_id):
             document_parser_version=document.parser_version,
         )
         extraction = extract_resume_with_fallback(extraction_request)
+        review = create_resume_review(
+            profile=profile,
+            source=source,
+            document=document,
+            extraction=extraction,
+        )
     except (ResumeDocumentError, ResumeExtractionError) as exc:
         messages.error(request, f"Resume extraction could not start: {exc}")
         return redirect("candidate_profile:resume_source_list")
 
-    request.session[RESUME_EXTRACTION_SESSION_KEY] = {
-        "source": {
-            "id": source.id,
-            "label": source.display_label,
-            "filename": source.original_filename,
-            "sha256": source.sha256,
-            "is_active": source.is_active,
-        },
-        "document": document.to_dict(),
-        "extraction": extraction,
-        "created_at": timezone.now().isoformat(),
-    }
+    request.session[RESUME_EXTRACTION_SESSION_KEY] = {"review_id": review.id}
 
     orchestration = extraction.get("orchestration", {})
     if orchestration.get("manual_review_required"):
         messages.warning(
             request,
             (
-                f"No extractor produced a structured draft for {source.display_label}. "
-                "The locally parsed text is available for manual review, and the career "
-                "profile remains unchanged."
+                f"No extractor produced structured claims for {source.display_label}. "
+                "The career profile and approved candidate claims remain unchanged."
             ),
         )
     elif orchestration.get("fallback_used"):
         messages.warning(
             request,
             (
-                f"A deterministic fallback created the review draft for "
-                f"{source.display_label}. No career-profile fields or match scores "
-                "were changed."
+                f"A deterministic fallback created an editable review for "
+                f"{source.display_label}. No claims were approved automatically."
             ),
         )
     else:
         messages.success(
             request,
             (
-                f"Review draft created from {source.display_label}. "
-                "No career-profile fields or match scores were changed."
+                f"Editable review created from {source.display_label}. "
+                "Every claim is pending until you approve or reject it."
             ),
         )
     return redirect("candidate_profile:resume_extraction_review")
 
 
-@require_http_methods(["GET"])
+@require_http_methods(["GET", "POST"])
 def resume_extraction_review(request):
-    draft = request.session.get(RESUME_EXTRACTION_SESSION_KEY)
-    if not draft:
-        messages.info(request, "No resume extraction draft is waiting for review.")
+    review = _active_session_review(request)
+    if review is None:
+        messages.info(request, "No resume extraction review is waiting.")
         return redirect("candidate_profile:resume_source_list")
 
-    source_data = draft.get("source", {})
-    source = ResumeSource.objects.filter(id=source_data.get("id")).first()
-    if source is None or source.sha256 != source_data.get("sha256"):
+    source = ResumeSource.objects.filter(id=review.source_id).first()
+    if source is None or source.sha256 != review.source_sha256:
+        if review.is_open:
+            review.status = ResumeExtractionReview.Status.STALE
+            review.save(update_fields=["status", "updated_at"])
         request.session.pop(RESUME_EXTRACTION_SESSION_KEY, None)
         messages.error(
             request,
-            "The resume source for this draft no longer exists or no longer matches.",
+            "The resume source for this review no longer exists or no longer matches.",
         )
         return redirect("candidate_profile:resume_source_list")
+
+    claims = list(review.claims.select_related("review").all())
+    forms = [
+        ResumeReviewClaimForm(
+            request.POST or None,
+            claim=claim,
+            prefix=f"claim-{claim.id}",
+        )
+        for claim in claims
+    ]
+
+    if request.method == "POST":
+        action = request.POST.get("action", "save")
+        valid = all(form.is_valid() for form in forms)
+        if valid:
+            try:
+                with transaction.atomic():
+                    for form in forms:
+                        form.save()
+                    if review.is_open:
+                        review.status = ResumeExtractionReview.Status.IN_REVIEW
+                        review.save(update_fields=["status", "updated_at"])
+                    if action == "apply":
+                        applied = apply_approved_claims(review)
+                    else:
+                        applied = 0
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            else:
+                if action == "apply":
+                    if applied:
+                        messages.success(
+                            request,
+                            (
+                                f"Applied {applied} approved claim"
+                                f"{'s' if applied != 1 else ''} to candidate evidence. "
+                                "Manual career-profile fields were not overwritten."
+                            ),
+                        )
+                    else:
+                        messages.info(
+                            request,
+                            "No new approved claims were waiting to be applied.",
+                        )
+                else:
+                    messages.success(
+                        request,
+                        "Review decisions and edits saved. No claims were applied.",
+                    )
+                return redirect("candidate_profile:resume_extraction_review")
+        else:
+            messages.error(
+                request,
+                "Correct the highlighted claim errors before saving or applying.",
+            )
+
+    try:
+        document = extract_resume_document_text(source)
+    except ResumeDocumentError as exc:
+        document = None
+        messages.warning(request, f"The stored resume could not be reopened: {exc}")
+
+    review.refresh_from_db()
+    claims = list(review.claims.select_related("review").all())
+    if request.method != "POST":
+        forms = [
+            ResumeReviewClaimForm(claim=claim, prefix=f"claim-{claim.id}")
+            for claim in claims
+        ]
 
     return render(
         request,
         "candidate_profile/resume_extraction_review.html",
         {
-            "draft": draft,
+            "review": review,
             "source": source,
-            "document": draft.get("document", {}),
-            "extraction": draft.get("extraction", {}),
+            "document": document,
+            "claim_groups": _group_claim_forms(claims, forms),
+            "claim_count": len(claims),
+            "active_approved_claim_count": CandidateProfileClaim.objects.filter(
+                profile=review.profile,
+                is_active=True,
+            ).count(),
         },
     )
 
 
 @require_POST
 def clear_resume_extraction(request):
+    review = _active_session_review(request)
+    if review:
+        review = close_resume_review(review)
     request.session.pop(RESUME_EXTRACTION_SESSION_KEY, None)
-    messages.success(
-        request,
-        "Resume extraction draft discarded. The stored resume source remains available.",
-    )
+
+    if review and review.status == ResumeExtractionReview.Status.COMPLETED:
+        messages.success(
+            request,
+            "Review closed. Applied claims remain in candidate evidence.",
+        )
+    else:
+        messages.success(
+            request,
+            "Review discarded. No unapproved claim entered candidate evidence.",
+        )
     return redirect("candidate_profile:resume_source_list")
+
+
+def candidate_claim_list(request):
+    profile = CareerProfile.get_solo()
+    claims = profile.approved_resume_claims.filter(is_active=True).select_related("source")
+    grouped = OrderedDict(
+        (
+            section,
+            {
+                "key": section,
+                "label": dict(ResumeReviewClaim.Section.choices)[section],
+                "claims": [],
+            },
+        )
+        for section in SECTION_ORDER
+    )
+    for claim in claims:
+        grouped[claim.section]["claims"].append(claim)
+
+    return render(
+        request,
+        "candidate_profile/candidate_claim_list.html",
+        {
+            "profile": profile,
+            "claim_groups": [group for group in grouped.values() if group["claims"]],
+            "claim_count": claims.count(),
+        },
+    )
