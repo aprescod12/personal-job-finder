@@ -199,7 +199,7 @@ class JobEvaluationViewTests(JobEvaluationServiceTests):
 
         response = self.client.get(reverse("job_list"))
         self.assertContains(response, "CURRENT ·")
-        self.assertContains(response, "0 JOBs NEED REEVALUATION")
+        self.assertContains(response, "0 JOBS NEED REEVALUATION")
 
     def test_history_page_preserves_multiple_runs_and_deltas(self):
         first = evaluate_job(self.job)
