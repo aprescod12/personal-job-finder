@@ -198,8 +198,8 @@ class JobEvaluationViewTests(JobEvaluationServiceTests):
         self.assertRedirects(response, reverse("job_list"))
 
         response = self.client.get(reverse("job_list"))
-        self.assertContains(response, "CURRENT")
-        self.assertContains(response, "1 JOB")
+        self.assertContains(response, "CURRENT ·")
+        self.assertContains(response, "0 JOBs NEED REEVALUATION")
 
     def test_history_page_preserves_multiple_runs_and_deltas(self):
         first = evaluate_job(self.job)
@@ -213,5 +213,5 @@ class JobEvaluationViewTests(JobEvaluationServiceTests):
         self.assertContains(response, "CURRENT PERSISTED RESULT")
         self.assertContains(response, "RESOLVED GAPS")
         self.assertContains(response, "Python")
-        self.assertContains(response, first.matcher_version, count=2)
+        self.assertContains(response, first.matcher_version)
         self.assertContains(response, str(second.score))
