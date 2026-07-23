@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "tracker",
     "intake_history.apps.IntakeHistoryConfig",
     "candidate_profile.apps.CandidateProfileConfig",
+    "job_discovery.apps.JobDiscoveryConfig",
 ]
 
 MIDDLEWARE = [
