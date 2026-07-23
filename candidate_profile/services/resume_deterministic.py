@@ -4,7 +4,7 @@ from collections import defaultdict
 from .resume_extraction import BaseResumeExtractor, ResumeExtractionRequest
 
 
-PARSER_VERSION = "deterministic-resume-v1"
+PARSER_VERSION = "deterministic-resume-v2"
 
 _SECTION_ALIASES = {
     "summary": "summary",
@@ -15,12 +15,15 @@ _SECTION_ALIASES = {
     "academic background": "education",
     "experience": "experience",
     "professional experience": "experience",
+    "research and professional experience": "experience",
+    "research experience": "experience",
     "work experience": "experience",
     "employment": "experience",
     "projects": "projects",
     "selected projects": "projects",
     "technical projects": "projects",
     "skills": "skills",
+    "skill s": "skills",
     "technical skills": "skills",
     "core skills": "skills",
     "certifications": "certifications",
@@ -29,16 +32,25 @@ _SECTION_ALIASES = {
     "leadership and activities": "leadership",
     "activities": "leadership",
     "organizations": "leadership",
+    "relevant coursework": "coursework",
+    "coursework": "coursework",
 }
 
 _EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
-_PHONE_PATTERN = re.compile(r"(?<!\w)(?:\+?\d[\d().\s-]{7,}\d)(?!\w)")
+_PHONE_PATTERN = re.compile(
+    r"(?<!\w)(?:\+?\d{1,3}[\s.-]*)?(?:\(\d{2,4}\)|\d{2,4})"
+    r"[\s.-]*\d{3}[\s.-]*\d{4}(?!\w)"
+)
 _LINK_PATTERN = re.compile(
     r"(?:https?://[^\s|]+|(?:linkedin\.com|github\.com)/[^\s|]+)",
     re.IGNORECASE,
 )
+_LOCATION_PATTERN = re.compile(
+    r"\b[A-Za-z][A-Za-z .'-]{1,50},\s*[A-Z]{2}\b"
+)
 _DATE_PATTERN = re.compile(
-    r"\b(?:19|20)\d{2}\b|\b(?:present|current)\b|"
+    r"\b(?:19|20)\d{2}\b|\b(?:present|current|expected)\b|"
+    r"\b(?:spring|summer|fall|autumn|winter)\b|"
     r"\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|"
     r"jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|"
     r"dec(?:ember)?)\b",
@@ -52,8 +64,10 @@ def _clean_line(value: str) -> str:
 
 
 def _normalized_heading(value: str) -> str:
-    value = _clean_line(value).casefold().rstrip(":")
-    value = re.sub(r"[^a-z0-9 &/-]+", "", value)
+    value = _clean_line(value).casefold()
+    value = re.sub(r"\s*[_=]{3,}\s*$", "", value)
+    value = value.rstrip(":").replace("&", " and ")
+    value = re.sub(r"[^a-z0-9 /-]+", "", value)
     return re.sub(r"\s+", " ", value).strip()
 
 
@@ -92,27 +106,77 @@ def _blocks(lines):
     return blocks
 
 
+def _split_dates(value: str) -> tuple[str, str]:
+    matches = list(_DATE_PATTERN.finditer(value or ""))
+    if not matches:
+        return (value or "").strip(), ""
+
+    start = matches[0].start()
+    prefix = (value or "")[:start].rstrip(" |,-–—")
+    dates = (value or "")[start:].strip(" |,-–—")
+    return prefix.strip(), dates.strip()
+
+
+def _split_pipe(value: str) -> tuple[str, str]:
+    if "|" not in value:
+        return value.strip(), ""
+    left, right = value.split("|", 1)
+    return left.strip(), right.strip()
+
+
+def _is_detail_line(value: str) -> bool:
+    return bool(
+        not value
+        or value.startswith(("http://", "https://"))
+        or value[:1].islower()
+    )
+
+
 def _generic_entries(lines):
     entries = []
     for block in _blocks(lines):
-        if not block:
+        cleaned_block = [_clean_line(line) for line in block if _clean_line(line)]
+        if not cleaned_block:
             continue
-        dates = ""
-        details = list(block[1:])
-        for line in block:
-            if _DATE_PATTERN.search(line):
-                dates = line
-                if line in details:
-                    details.remove(line)
-                break
 
+        source_text = "\n".join(cleaned_block)
+        primary = cleaned_block[0]
+        primary_without_dates, dates = _split_dates(primary)
+        heading, subheading = _split_pipe(primary_without_dates)
+        consumed = {0}
+
+        if len(cleaned_block) > 1 and not subheading:
+            candidate = cleaned_block[1]
+            if not _is_detail_line(candidate):
+                candidate_without_dates, candidate_dates = _split_dates(candidate)
+                candidate_heading, candidate_subheading = _split_pipe(
+                    candidate_without_dates
+                )
+                subheading = candidate_heading
+                if candidate_subheading:
+                    dates = dates or candidate_subheading
+                dates = dates or candidate_dates
+                consumed.add(1)
+
+        if not dates:
+            for line in cleaned_block:
+                _, candidate_dates = _split_dates(line)
+                if candidate_dates:
+                    dates = candidate_dates
+                    break
+
+        details = [
+            line
+            for index, line in enumerate(cleaned_block)
+            if index not in consumed and line != dates
+        ]
         entries.append(
             {
-                "heading": block[0],
-                "subheading": block[1] if len(block) > 1 and block[1] != dates else "",
+                "heading": heading or primary,
+                "subheading": subheading,
                 "dates": dates,
                 "details": details,
-                "source_text": "\n".join(block),
+                "source_text": source_text,
             }
         )
     return entries
@@ -145,31 +209,50 @@ def _extract_skills(lines):
     return _dedupe(skills)
 
 
+def _looks_like_name(value: str) -> bool:
+    value = _clean_line(value)
+    if not 2 <= len(value) <= 80:
+        return False
+    if any(character.isdigit() for character in value):
+        return False
+    if any(marker in value for marker in ("@", "|", ":", "/")):
+        return False
+    if _normalized_heading(value) in _SECTION_ALIASES:
+        return False
+
+    words = value.split()
+    if not 2 <= len(words) <= 6:
+        return False
+    return all(re.fullmatch(r"[A-Za-z][A-Za-z.'-]*", word) for word in words)
+
+
 def _header_values(header_lines):
     lines = [line for line in header_lines if line]
     joined = " | ".join(lines[:12])
 
     email_match = _EMAIL_PATTERN.search(joined)
     phone_match = _PHONE_PATTERN.search(joined)
+    location_match = _LOCATION_PATTERN.search(joined)
     links = _dedupe(_LINK_PATTERN.findall(joined))
 
     full_name = ""
-    location = ""
     for line in lines[:8]:
-        lowered = line.casefold()
-        if lowered.startswith("location:"):
-            location = line.split(":", 1)[1].strip()
-            continue
-        if _EMAIL_PATTERN.search(line) or _PHONE_PATTERN.search(line) or _LINK_PATTERN.search(line):
-            continue
-        if not full_name and 2 <= len(line) <= 80 and re.search(r"[A-Za-z]", line):
+        if _looks_like_name(line):
             full_name = line
+            break
+
+        email_in_line = _EMAIL_PATTERN.search(line)
+        if email_in_line:
+            prefix = line[: email_in_line.start()].strip(" |")
+            if _looks_like_name(prefix):
+                full_name = prefix
+                break
 
     return {
         "full_name": full_name,
         "email": email_match.group(0) if email_match else "",
         "phone": phone_match.group(0).strip() if phone_match else "",
-        "location": location,
+        "location": location_match.group(0).strip() if location_match else "",
         "links": links,
     }
 
@@ -208,7 +291,7 @@ class DeterministicResumeExtractor(BaseResumeExtractor):
                 _evidence(
                     "identity.full_name",
                     identity["full_name"],
-                    "Used the first non-contact header line as the name candidate.",
+                    "Used the first reliable non-contact header line as the name candidate.",
                 )
             )
         if identity["email"]:
