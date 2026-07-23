@@ -10,7 +10,6 @@ from django.utils import timezone
 from intake_history.services import (
     DUPLICATE_REASON_EXACT_TEXT,
     DUPLICATE_REASON_EXACT_URL,
-    DUPLICATE_REASON_SAME_ROLE,
     analyze_job_duplicates,
     listing_text_sha256,
     normalize_source_url,
@@ -29,7 +28,7 @@ from .providers import (
 )
 
 
-APPROVED_DISCOVERY_PROVIDERS: dict[str, type[DiscoveryProvider]] = {
+APPROVED_DISCOVERY_PROVIDERS: dict[str, type] = {
     FixtureDiscoveryProvider.key: FixtureDiscoveryProvider,
 }
 
@@ -51,7 +50,8 @@ def _split_lines(value: str) -> tuple[str, ...]:
 
 
 def _normalize(value: str) -> str:
-    return re.sub(r"\s+", " ", (value or "").casefold()).strip()
+    value = re.sub(r"[^a-z0-9]+", " ", (value or "").casefold())
+    return re.sub(r"\s+", " ", value).strip()
 
 
 def approved_provider_choices():
@@ -142,7 +142,7 @@ def assess_broad_relevance(item: DiscoveredOpportunity, query: DiscoveryQuery):
     if arrangement and arrangement != "flexible" and arrangement_match:
         reasons.append("Work arrangement matches the manual preference.")
 
-    employment = _normalize(query.preferred_employment_type).replace("_", " ")
+    employment = _normalize(query.preferred_employment_type)
     employment_match = not employment or _contains_phrase(
         item.employment_type_hint,
         employment,
@@ -201,7 +201,7 @@ def _prior_discovery_duplicate(
     return None, "", ""
 
 
-def _duplicate_state(item: DiscoveredOpportunity):
+def _duplicate_state(item: DiscoveredOpportunity, *, provider_key: str):
     normalized_url = normalize_source_url(item.source_url)
     text_hash = listing_text_sha256(item.raw_listing_text)
     role_hash = role_identity_sha256(
@@ -214,7 +214,7 @@ def _duplicate_state(item: DiscoveredOpportunity):
     duplicate_of_job = None
 
     prior, reason, label = _prior_discovery_duplicate(
-        provider_key="fixture" if not item.metadata.get("provider_key") else str(item.metadata["provider_key"]),
+        provider_key=provider_key,
         external_id=item.external_id.strip(),
         normalized_url=normalized_url,
         text_hash=text_hash,
@@ -243,22 +243,16 @@ def _duplicate_state(item: DiscoveredOpportunity):
         },
     )
     for candidate in tracked_analysis.get("candidates", []):
-        details.append(
-            {
-                "scope": "tracked_job",
-                **candidate,
-            }
-        )
+        details.append({"scope": "tracked_job", **candidate})
         if candidate.get("blocking") and duplicate_of_job is None:
             duplicate_of_job = JobPosting.objects.filter(pk=candidate["job_id"]).first()
 
-    blocking = any(bool(detail.get("blocking")) for detail in details)
     return {
         "normalized_url": normalized_url,
         "text_hash": text_hash,
         "role_hash": role_hash,
         "details": details,
-        "blocking": blocking,
+        "blocking": any(bool(detail.get("blocking")) for detail in details),
         "duplicate_of_opportunity": duplicate_of_opportunity,
         "duplicate_of_job": duplicate_of_job,
     }
@@ -274,28 +268,8 @@ def _save_provider_results(
     opportunities = []
     for item in results:
         _validate_opportunity(item)
-        metadata = dict(item.metadata)
-        metadata.setdefault("provider_key", provider.key)
-        item = DiscoveredOpportunity(
-            external_id=item.external_id,
-            source_url=item.source_url,
-            title_hint=item.title_hint,
-            company_hint=item.company_hint,
-            location_hint=item.location_hint,
-            raw_listing_text=item.raw_listing_text,
-            employment_type_hint=item.employment_type_hint,
-            work_arrangement_hint=item.work_arrangement_hint,
-            industry_hint=item.industry_hint,
-            seniority_hint=item.seniority_hint,
-            metadata=metadata,
-        )
-        duplicate = _duplicate_state(item)
+        duplicate = _duplicate_state(item, provider_key=provider.key)
         relevance, relevance_reasons = assess_broad_relevance(item, query)
-        status = (
-            RawJobOpportunity.Status.DUPLICATE
-            if duplicate["blocking"]
-            else RawJobOpportunity.Status.NEW
-        )
         opportunities.append(
             RawJobOpportunity.objects.create(
                 run=run,
@@ -315,19 +289,22 @@ def _save_provider_results(
                 raw_listing_text=item.raw_listing_text.strip(),
                 raw_text_sha256=duplicate["text_hash"],
                 role_identity_sha256=duplicate["role_hash"],
-                provider_payload=metadata,
+                provider_payload=dict(item.metadata),
                 broad_relevance=relevance,
                 broad_relevance_reasons=relevance_reasons,
                 duplicate_details=duplicate["details"],
                 duplicate_of_opportunity=duplicate["duplicate_of_opportunity"],
                 duplicate_of_job=duplicate["duplicate_of_job"],
-                status=status,
+                status=(
+                    RawJobOpportunity.Status.DUPLICATE
+                    if duplicate["blocking"]
+                    else RawJobOpportunity.Status.NEW
+                ),
             )
         )
     return opportunities
 
 
-@transaction.atomic
 def run_discovery(
     provider_key: str,
     *,
@@ -348,12 +325,13 @@ def run_discovery(
 
     try:
         results = tuple(provider.discover(query))
-        opportunities = _save_provider_results(
-            run=run,
-            provider=provider,
-            query=query,
-            results=results,
-        )
+        with transaction.atomic():
+            opportunities = _save_provider_results(
+                run=run,
+                provider=provider,
+                query=query,
+                results=results,
+            )
     except Exception as exc:
         run.status = DiscoveryRun.Status.FAILED
         run.error_message = str(exc)
@@ -405,9 +383,8 @@ def keep_duplicate_for_processing(opportunity: RawJobOpportunity):
     return opportunity
 
 
-@transaction.atomic
 def prepare_opportunity_for_processing(opportunity: RawJobOpportunity):
-    opportunity = RawJobOpportunity.objects.select_for_update().get(pk=opportunity.pk)
+    opportunity = RawJobOpportunity.objects.get(pk=opportunity.pk)
     if not opportunity.can_send_to_processing:
         raise DiscoveryHandoffError(
             "This opportunity must be new, explicitly retained, or ready for retry before processing."
@@ -420,9 +397,11 @@ def prepare_opportunity_for_processing(opportunity: RawJobOpportunity):
             source_label=opportunity.provider_label,
         )
     except JobExtractionError as exc:
-        opportunity.status = RawJobOpportunity.Status.PROCESSING_FAILED
-        opportunity.processing_error = str(exc)
-        opportunity.save(update_fields=["status", "processing_error", "updated_at"])
+        RawJobOpportunity.objects.filter(pk=opportunity.pk).update(
+            status=RawJobOpportunity.Status.PROCESSING_FAILED,
+            processing_error=str(exc),
+            updated_at=timezone.now(),
+        )
         raise DiscoveryHandoffError(str(exc)) from exc
 
     duplicate_analysis = analyze_job_duplicates(
@@ -440,17 +419,23 @@ def prepare_opportunity_for_processing(opportunity: RawJobOpportunity):
         "discovery_run_id": opportunity.run_id,
     }
 
-    opportunity.status = RawJobOpportunity.Status.SENT_TO_PROCESSING
-    opportunity.processing_error = ""
-    opportunity.sent_to_processing_at = timezone.now()
-    opportunity.save(
-        update_fields=[
-            "status",
-            "processing_error",
-            "sent_to_processing_at",
-            "updated_at",
-        ]
-    )
+    with transaction.atomic():
+        opportunity = RawJobOpportunity.objects.select_for_update().get(pk=opportunity.pk)
+        if not opportunity.can_send_to_processing:
+            raise DiscoveryHandoffError(
+                "The opportunity changed state before the processing draft was ready."
+            )
+        opportunity.status = RawJobOpportunity.Status.SENT_TO_PROCESSING
+        opportunity.processing_error = ""
+        opportunity.sent_to_processing_at = timezone.now()
+        opportunity.save(
+            update_fields=[
+                "status",
+                "processing_error",
+                "sent_to_processing_at",
+                "updated_at",
+            ]
+        )
     return draft
 
 
