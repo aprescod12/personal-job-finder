@@ -16,7 +16,7 @@ from .resume_extraction import (
 )
 
 
-OPENAI_RESUME_BACKEND_VERSION = "openai-responses-resume-v2"
+OPENAI_RESUME_BACKEND_VERSION = "openai-responses-resume-v3"
 
 
 class OpenAIResumeResponsesBackend:
