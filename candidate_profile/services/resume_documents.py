@@ -93,7 +93,7 @@ def _normalize_text(value: str) -> str:
         if output_lines and output_lines[-1]:
             previous = output_lines[-1]
             if previous.endswith("-") and line[:1].islower():
-                output_lines[-1] = f"{previous[:-1]}{line}"
+                output_lines[-1] = f"{previous}{line}"
                 continuing_bullet = previous.startswith("• ") or continuing_bullet
                 continue
             if continuing_bullet and is_indented_continuation:
