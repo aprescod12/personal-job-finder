@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -10,12 +11,23 @@ if TYPE_CHECKING:
     from candidate_profile.models import ResumeSource
 
 
-DOCUMENT_PARSER_VERSION = "local-resume-document-reader-v1"
+DOCUMENT_PARSER_VERSION = "local-resume-document-reader-v2"
 MAX_EXTRACTED_CHARACTERS = 120_000
+PDF_LAYOUT_SCALE_WEIGHT = 0.5
 
 ERROR_UNSUPPORTED_FORMAT = "unsupported_format"
 ERROR_UNREADABLE_DOCUMENT = "unreadable_document"
 ERROR_EMPTY_DOCUMENT = "empty_document"
+
+_BULLET_TRANSLATION = str.maketrans(
+    {
+        "▪": "•",
+        "◦": "•",
+        "●": "•",
+        "·": "•",
+        "‣": "•",
+    }
+)
 
 
 class ResumeDocumentError(RuntimeError):
@@ -42,11 +54,56 @@ class ResumeDocumentText:
         }
 
 
+def _remove_hidden_format_characters(value: str) -> str:
+    return "".join(
+        character
+        for character in value
+        if character in {"\n", "\t"}
+        or unicodedata.category(character) != "Cf"
+    )
+
+
+def _normalize_line(value: str) -> str:
+    value = value.translate(_BULLET_TRANSLATION)
+    value = re.sub(r"[ \t]+", " ", value).strip()
+    value = re.sub(r"\s*[_=]{3,}\s*$", "", value).rstrip()
+    if value.startswith("•"):
+        value = f"• {value[1:].lstrip()}"
+    return value
+
+
 def _normalize_text(value: str) -> str:
-    value = (value or "").replace("\u00a0", " ")
+    value = unicodedata.normalize("NFKC", (value or "").replace("\u00a0", " "))
+    value = _remove_hidden_format_characters(value)
     value = value.replace("\r\n", "\n").replace("\r", "\n")
-    lines = [re.sub(r"[ \t]+$", "", line) for line in value.split("\n")]
-    value = "\n".join(lines)
+
+    output_lines: list[str] = []
+    continuing_bullet = False
+    for raw_line in value.split("\n"):
+        leading_spaces = len(raw_line) - len(raw_line.lstrip(" \t"))
+        line = _normalize_line(raw_line)
+        if not line:
+            if output_lines and output_lines[-1] != "":
+                output_lines.append("")
+            continuing_bullet = False
+            continue
+
+        is_bullet = line.startswith("• ")
+        is_indented_continuation = leading_spaces >= 5 and not is_bullet
+        if output_lines and output_lines[-1]:
+            previous = output_lines[-1]
+            if previous.endswith("-") and line[:1].islower():
+                output_lines[-1] = f"{previous[:-1]}{line}"
+                continuing_bullet = previous.startswith("• ") or continuing_bullet
+                continue
+            if continuing_bullet and is_indented_continuation:
+                output_lines[-1] = f"{previous} {line}"
+                continue
+
+        output_lines.append(line)
+        continuing_bullet = is_bullet
+
+    value = "\n".join(output_lines)
     value = re.sub(r"\n{3,}", "\n\n", value)
     return value.strip()
 
@@ -64,7 +121,20 @@ def _read_txt(stream) -> tuple[str, list[str]]:
     return text, warnings
 
 
+def _extract_pdf_page_text(page) -> tuple[str, bool]:
+    try:
+        text = page.extract_text(
+            extraction_mode="layout",
+            layout_mode_scale_weight=PDF_LAYOUT_SCALE_WEIGHT,
+        )
+        return text or "", True
+    except TypeError:
+        return page.extract_text() or "", False
+
+
 def _read_pdf(stream) -> tuple[str, list[str]]:
+    warnings: list[str] = []
+    layout_mode_used = True
     try:
         reader = PdfReader(stream)
         if reader.is_encrypted:
@@ -78,7 +148,8 @@ def _read_pdf(stream) -> tuple[str, list[str]]:
         pages = []
         empty_pages = []
         for page_number, page in enumerate(reader.pages, start=1):
-            page_text = page.extract_text() or ""
+            page_text, used_layout = _extract_pdf_page_text(page)
+            layout_mode_used = layout_mode_used and used_layout
             if page_text.strip():
                 pages.append(page_text)
             else:
@@ -90,7 +161,10 @@ def _read_pdf(stream) -> tuple[str, list[str]]:
             "The stored PDF could not be read safely."
         ) from exc
 
-    warnings = []
+    if not layout_mode_used:
+        warnings.append(
+            "The installed PDF reader did not support layout-preserving extraction; plain extraction was used."
+        )
     if empty_pages:
         page_list = ", ".join(str(number) for number in empty_pages[:8])
         suffix = "" if len(empty_pages) <= 8 else ", …"
