@@ -186,4 +186,11 @@ class JobIntakeReviewForm(forms.Form):
             reviewed_data=data,
             duplicate_analysis=self.duplicate_analysis,
         )
+
+        discovery_opportunity_id = intake_draft.get("discovery_opportunity_id")
+        if discovery_opportunity_id:
+            from job_discovery.services import mark_opportunity_processed
+
+            mark_opportunity_processed(discovery_opportunity_id, job)
+
         return job
