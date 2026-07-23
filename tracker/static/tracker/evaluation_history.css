@@ -1,3 +1,89 @@
+.evaluation-status-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 12px;
+    margin-bottom: -6px;
+    padding: 0.9rem 1rem;
+}
+
+.evaluation-status-strip > div:first-child {
+    display: grid;
+    gap: 0.22rem;
+}
+
+.evaluation-status-strip span,
+.evaluation-dashboard-panel span,
+.evaluation-card-status span {
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.evaluation-status-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.evaluation-status-current {
+    border-color: var(--lime);
+    box-shadow: 5px 5px 0 var(--lime);
+}
+
+.evaluation-status-stale {
+    border-color: var(--danger);
+    background: var(--danger-soft);
+    box-shadow: 5px 5px 0 var(--danger);
+}
+
+.evaluation-status-missing {
+    border-style: dashed;
+}
+
+.evaluation-dashboard-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.evaluation-dashboard-counts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(90px, 1fr));
+    gap: 0.65rem;
+}
+
+.evaluation-dashboard-counts article,
+.evaluation-card-status {
+    display: grid;
+    gap: 0.2rem;
+    border: 2px solid var(--ink);
+    background: #fff;
+    padding: 0.7rem;
+}
+
+.evaluation-card-status {
+    margin-top: 0.65rem;
+}
+
+.evaluation-card-current {
+    border-left: 6px solid var(--lime);
+}
+
+.evaluation-card-stale {
+    border-left: 6px solid var(--danger);
+    background: var(--danger-soft);
+}
+
+.evaluation-card-missing {
+    border-left: 6px solid var(--sky);
+}
+
 .evaluation-history-heading,
 .evaluation-current-card {
     display: flex;
@@ -167,6 +253,8 @@
 }
 
 @media (max-width: 900px) {
+    .evaluation-status-strip,
+    .evaluation-dashboard-panel,
     .evaluation-history-heading,
     .evaluation-current-card,
     .evaluation-run-card header {
@@ -174,6 +262,12 @@
         flex-direction: column;
     }
 
+    .evaluation-status-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .evaluation-dashboard-counts,
     .evaluation-meta-grid,
     .evaluation-change-grid,
     .evaluation-result-columns {
