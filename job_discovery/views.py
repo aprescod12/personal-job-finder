@@ -12,6 +12,7 @@ from .services import (
     DiscoveryHandoffError,
     keep_duplicate_for_processing,
     prepare_opportunity_for_processing,
+    release_opportunity_handoff,
     run_discovery,
 )
 
@@ -167,6 +168,11 @@ def retain_duplicate(request, opportunity_id):
 @require_POST
 def send_to_processing(request, opportunity_id):
     opportunity = get_object_or_404(RawJobOpportunity, pk=opportunity_id)
+    current_draft = request.session.get(INTAKE_SESSION_KEY, {})
+    current_opportunity_id = current_draft.get("discovery_opportunity_id")
+    if current_opportunity_id and current_opportunity_id != opportunity.id:
+        release_opportunity_handoff(current_opportunity_id)
+
     try:
         draft = prepare_opportunity_for_processing(opportunity)
     except DiscoveryHandoffError as exc:
