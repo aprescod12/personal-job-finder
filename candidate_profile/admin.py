@@ -6,6 +6,10 @@ from .models import (
     ResumeReviewClaim,
     ResumeSource,
 )
+from .snapshot_models import (
+    CandidateProfileSnapshot,
+    CandidateProfileSnapshotClaim,
+)
 
 
 class ReadOnlyAuditAdmin(admin.ModelAdmin):
@@ -121,3 +125,47 @@ class CandidateProfileClaimAdmin(ReadOnlyAuditAdmin):
     )
     readonly_fields = tuple(field.name for field in CandidateProfileClaim._meta.fields)
     date_hierarchy = "approved_at"
+
+
+@admin.register(CandidateProfileSnapshot)
+class CandidateProfileSnapshotAdmin(ReadOnlyAuditAdmin):
+    list_display = (
+        "profile",
+        "version",
+        "status",
+        "composition_version",
+        "source_claim_count",
+        "created_at",
+        "activated_at",
+    )
+    list_filter = ("status", "composition_version", "created_at")
+    search_fields = (
+        "profile__full_name",
+        "fingerprint",
+        "composition_version",
+    )
+    readonly_fields = tuple(
+        field.name for field in CandidateProfileSnapshot._meta.fields
+    )
+    date_hierarchy = "created_at"
+
+
+@admin.register(CandidateProfileSnapshotClaim)
+class CandidateProfileSnapshotClaimAdmin(ReadOnlyAuditAdmin):
+    list_display = (
+        "snapshot",
+        "position",
+        "section",
+        "field_path",
+        "candidate_claim",
+    )
+    list_filter = ("section",)
+    search_fields = (
+        "field_path",
+        "semantic_key",
+        "snapshot__fingerprint",
+        "candidate_claim__source_label",
+    )
+    readonly_fields = tuple(
+        field.name for field in CandidateProfileSnapshotClaim._meta.fields
+    )

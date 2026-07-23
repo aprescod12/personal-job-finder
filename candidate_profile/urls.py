@@ -1,5 +1,11 @@
 from django.urls import path
 
+from .snapshot_views import (
+    activate_candidate_snapshot,
+    candidate_snapshot_detail,
+    candidate_snapshot_list,
+    compose_candidate_snapshot,
+)
 from .views import (
     activate_resume_source,
     candidate_claim_list,
@@ -16,6 +22,22 @@ app_name = "candidate_profile"
 urlpatterns = [
     path("", resume_source_list, name="resume_source_list"),
     path("claims/", candidate_claim_list, name="candidate_claim_list"),
+    path("snapshots/", candidate_snapshot_list, name="candidate_snapshot_list"),
+    path(
+        "snapshots/compose/",
+        compose_candidate_snapshot,
+        name="compose_candidate_snapshot",
+    ),
+    path(
+        "snapshots/<int:snapshot_id>/",
+        candidate_snapshot_detail,
+        name="candidate_snapshot_detail",
+    ),
+    path(
+        "snapshots/<int:snapshot_id>/activate/",
+        activate_candidate_snapshot,
+        name="activate_candidate_snapshot",
+    ),
     path(
         "<int:source_id>/activate/",
         activate_resume_source,
