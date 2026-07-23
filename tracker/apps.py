@@ -19,4 +19,5 @@ class TrackerConfig(AppConfig):
         # matching calls throughout the application.
         strategy_matching.analyze_job_match = analyze_controlled_semantic_match
 
+        from . import evaluation_admin  # noqa: F401,E402
         from . import evaluation_signals  # noqa: F401,E402
