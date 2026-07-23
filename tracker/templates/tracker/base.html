@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="{% static 'tracker/page_interpretation.css' %}">
     <link rel="stylesheet" href="{% static 'tracker/dashboard_location.css' %}">
 </head>
-<body>
+<body{% if request.resolver_match.url_name == 'job_match' and match_result and not blind_validation %} class="match-audit-present"{% endif %}>
     <header class="site-header">
         <div class="container nav-row">
             <a class="brand" href="{% url 'job_list' %}" aria-label="Amiri's Job Finder dashboard">
@@ -56,6 +56,19 @@
                 <span>Confirm the direct employer page and deadline before treating this role as actionable.</span>
             </div>
             <a class="button button-secondary" href="{% url 'job_listing_verify' job.id %}">VERIFY LISTING</a>
+        </div>
+    {% endif %}
+
+    {% if request.resolver_match.url_name == 'job_match' and match_result and not blind_validation %}
+        <div class="container match-audit-strip" aria-label="Match audit metadata">
+            {% if match_result.matcher_version %}
+                <span class="match-audit-label match-audit-matcher">MATCHER {{ match_result.matcher_version }}</span>
+            {% endif %}
+            {% if match_result.candidate_snapshot_version %}
+                <a class="match-audit-label match-audit-profile" href="{% url 'candidate_profile:candidate_snapshot_detail' match_result.candidate_snapshot_id %}">CANDIDATE PROFILE V{{ match_result.candidate_snapshot_version }} · {{ match_result.candidate_snapshot_composition_version }}</a>
+            {% else %}
+                <span class="match-audit-label match-audit-profile match-audit-manual">CANDIDATE PROFILE · MANUAL ONLY</span>
+            {% endif %}
         </div>
     {% endif %}
 
