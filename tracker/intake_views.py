@@ -12,6 +12,16 @@ from .services.job_extraction_coordinator import extract_job_with_fallback
 INTAKE_SESSION_KEY = "stage4_job_intake_draft"
 
 
+def _release_discovery_draft(draft):
+    opportunity_id = (draft or {}).get("discovery_opportunity_id")
+    if not opportunity_id:
+        return None
+
+    from job_discovery.services import release_opportunity_handoff
+
+    return release_opportunity_handoff(opportunity_id)
+
+
 def job_intake_start(request):
     duplicate_analysis = None
 
@@ -65,6 +75,7 @@ def job_intake_start(request):
                         raw_text=raw_text,
                         extracted_job=extraction.get("job", {}),
                     )
+                    _release_discovery_draft(request.session.get(INTAKE_SESSION_KEY))
                     request.session[INTAKE_SESSION_KEY] = {
                         "raw_text": raw_text,
                         "source_url": source_url,
@@ -166,7 +177,16 @@ def job_intake_review(request):
 
 @require_POST
 def job_intake_clear(request):
+    draft = request.session.get(INTAKE_SESSION_KEY)
+    released = _release_discovery_draft(draft)
     request.session.pop(INTAKE_SESSION_KEY, None)
     request.session.modified = True
+    if released:
+        messages.info(
+            request,
+            "Processing draft discarded. The discovery opportunity returned to the inbox.",
+        )
+        return redirect("job_discovery:opportunity_detail", opportunity_id=released.id)
+
     messages.info(request, "Intake draft discarded. No job or history record was created.")
     return redirect("job_intake_start")
