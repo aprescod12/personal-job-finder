@@ -1,16 +1,17 @@
 {% extends "tracker/base.html" %}
-{% load static %}
+{% load static evaluation_tags %}
 
 {% block title %}Job Dashboard{% endblock %}
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'tracker/dashboard_simplified.css' %}">
+{% evaluation_dashboard_summary as evaluation_summary %}
 <div class="simplified-dashboard">
 <section class="page-heading dashboard-heading-compact">
     <div>
         <p class="eyebrow">CAREER COMMAND CENTER</p>
         <h1>PRIORITIZE THE RIGHT OPPORTUNITIES.</h1>
-        <p class="muted">Use the match score to rank fit, then act on listing status, deadlines, and your next step.</p>
+        <p class="muted">Use the live match score to rank fit, then persist reevaluations when your résumé, preferences, job requirements, or matcher changes.</p>
     </div>
 </section>
 
@@ -19,6 +20,23 @@
     <article class="stat-card"><span>VERIFIED OPEN</span><strong>{{ verified_open_jobs }}</strong></article>
     <article class="stat-card"><span>VERIFY NOW</span><strong>{{ verification_needed_jobs }}</strong></article>
     <article class="stat-card"><span>DEADLINE ≤ 7 DAYS</span><strong>{{ deadline_soon_jobs }}</strong></article>
+</section>
+
+<section class="panel evaluation-dashboard-panel">
+    <div>
+        <p class="eyebrow">PERSISTED MATCH HISTORY</p>
+        <h2>{{ evaluation_summary.needs_reevaluation }} JOB{{ evaluation_summary.needs_reevaluation|pluralize }} NEED REEVALUATION</h2>
+        <p>Live scores always use current inputs. Persisted runs provide the auditable before-and-after history.</p>
+        <div class="evaluation-dashboard-counts">
+            <article><span>CURRENT</span><strong>{{ evaluation_summary.current }}</strong></article>
+            <article><span>STALE</span><strong>{{ evaluation_summary.stale }}</strong></article>
+            <article><span>NO BASELINE</span><strong>{{ evaluation_summary.missing }}</strong></article>
+        </div>
+    </div>
+    <form method="post" action="{% url 'reevaluate_all_jobs' %}">
+        {% csrf_token %}
+        <button class="button button-primary" type="submit"{% if not total_jobs %} disabled{% endif %}>REEVALUATE ALL JOBS</button>
+    </form>
 </section>
 
 {% if blind_sort_reset %}
@@ -109,6 +127,7 @@
 {% if jobs %}
     <section class="job-grid compact-job-grid">
         {% for job in jobs %}
+            {% latest_job_evaluation job as evaluation_run %}
             <article class="job-card compact-job-card{% if job.blind_validation %} blind-validation-card{% endif %}{% if job.listing_is_unavailable %} listing-unavailable-card{% elif job.listing_needs_verification %} listing-needs-verification-card{% endif %}">
                 <div class="job-card-topline compact-card-topline">
                     <span class="status-badge status-{{ job.status }}">{{ job.get_status_display }}</span>
@@ -149,6 +168,22 @@
                     {% endif %}
                     <span class="dashboard-match-arrow">→</span>
                 </a>
+
+                {% if not job.blind_validation %}
+                <div class="evaluation-card-status{% if evaluation_run and evaluation_run.is_current %} evaluation-card-current{% elif evaluation_run %} evaluation-card-stale{% else %} evaluation-card-missing{% endif %}">
+                    <span>PERSISTED HISTORY</span>
+                    {% if evaluation_run and evaluation_run.is_current %}
+                        <strong>CURRENT · {{ evaluation_run.score|default:"—" }}/100</strong>
+                        <small>Profile {% if evaluation_run.candidate_snapshot_version %}v{{ evaluation_run.candidate_snapshot_version }}{% else %}manual only{% endif %} · {{ evaluation_run.matcher_version }}</small>
+                    {% elif evaluation_run %}
+                        <strong>STALE · LAST {{ evaluation_run.score|default:"—" }}/100</strong>
+                        <small>{{ evaluation_run.stale_reasons|join:" · " }}</small>
+                    {% else %}
+                        <strong>NO SAVED BASELINE</strong>
+                        <small>Open Match Analysis or use Reevaluation All.</small>
+                    {% endif %}
+                </div>
+                {% endif %}
 
                 <div class="compact-priority-row">
                     <div class="compact-priority-item{% if job.deadline_is_overdue %} deadline-overdue{% elif job.deadline_is_due_soon %} deadline-urgent{% endif %}">
