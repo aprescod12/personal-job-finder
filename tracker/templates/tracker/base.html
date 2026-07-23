@@ -1,4 +1,4 @@
-{% load static %}
+{% load static evaluation_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="{% static 'tracker/page_retrieval.css' %}">
     <link rel="stylesheet" href="{% static 'tracker/page_interpretation.css' %}">
     <link rel="stylesheet" href="{% static 'tracker/dashboard_location.css' %}">
+    <link rel="stylesheet" href="{% static 'tracker/evaluation_history.css' %}">
 </head>
 <body{% if request.resolver_match.url_name == 'job_match' and match_result and not blind_validation %} class="match-audit-present"{% endif %}>
     <header class="site-header">
@@ -70,6 +71,30 @@
                 <span class="match-audit-label match-audit-profile match-audit-manual">CANDIDATE PROFILE · MANUAL ONLY</span>
             {% endif %}
         </div>
+
+        {% latest_job_evaluation job as persisted_evaluation %}
+        <section class="container panel evaluation-status-strip{% if persisted_evaluation and persisted_evaluation.is_current %} evaluation-status-current{% elif persisted_evaluation %} evaluation-status-stale{% else %} evaluation-status-missing{% endif %}">
+            <div>
+                <span>PERSISTED EVALUATION</span>
+                {% if persisted_evaluation and persisted_evaluation.is_current %}
+                    <strong>CURRENT · {{ persisted_evaluation.score|default:"—" }}/100</strong>
+                    <small>Saved {{ persisted_evaluation.evaluated_at|date:"M j, Y, g:i a" }} against candidate profile {% if persisted_evaluation.candidate_snapshot_version %}v{{ persisted_evaluation.candidate_snapshot_version }}{% else %}manual only{% endif %}.</small>
+                {% elif persisted_evaluation %}
+                    <strong>STALE · LAST SAVED {{ persisted_evaluation.score|default:"—" }}/100</strong>
+                    <small>{{ persisted_evaluation.stale_reasons|join:" · " }}. The live score below already uses current inputs; reevaluate to preserve the new result.</small>
+                {% else %}
+                    <strong>NO SAVED BASELINE</strong>
+                    <small>The live score below is current but has not been persisted for future comparison.</small>
+                {% endif %}
+            </div>
+            <div class="evaluation-status-actions">
+                <form method="post" action="{% url 'reevaluate_job' job.id %}">
+                    {% csrf_token %}
+                    <button class="button button-primary" type="submit">{% if persisted_evaluation %}REEVALUATE JOB{% else %}SAVE BASELINE{% endif %}</button>
+                </form>
+                {% if persisted_evaluation %}<a class="button button-secondary" href="{% url 'evaluation_history' job.id %}">VIEW HISTORY</a>{% endif %}
+            </div>
+        </section>
     {% endif %}
 
     <main class="container page-shell"{% if request.resolver_match.url_name == 'job_detail' %} data-capabilities="ANALYZE EMPLOYER PAGE; AUDIT EVERY CHECK"{% endif %}>

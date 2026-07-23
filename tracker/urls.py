@@ -2,6 +2,7 @@ from django.urls import path
 
 from . import views
 from .calibration_views import calibration_report, weight_model_comparison
+from .evaluation_views import evaluation_history, reevaluate_all_jobs, reevaluate_job
 from .intake_views import job_intake_clear, job_intake_review, job_intake_start
 from .verification_views import (
     review_verification_run,
@@ -19,6 +20,7 @@ urlpatterns = [
         weight_model_comparison,
         name="weight_model_comparison",
     ),
+    path("evaluations/reevaluate/", reevaluate_all_jobs, name="reevaluate_all_jobs"),
     path("intake/", job_intake_start, name="job_intake_start"),
     path("intake/review/", job_intake_review, name="job_intake_review"),
     path("intake/clear/", job_intake_clear, name="job_intake_clear"),
@@ -45,6 +47,16 @@ urlpatterns = [
         name="review_verification_run",
     ),
     path("jobs/<int:job_id>/match/", views.job_match, name="job_match"),
+    path(
+        "jobs/<int:job_id>/match/reevaluate/",
+        reevaluate_job,
+        name="reevaluate_job",
+    ),
+    path(
+        "jobs/<int:job_id>/match/history/",
+        evaluation_history,
+        name="evaluation_history",
+    ),
     path(
         "jobs/<int:job_id>/requirements/",
         views.job_requirements,

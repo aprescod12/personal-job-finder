@@ -6,8 +6,9 @@ class TrackerConfig(AppConfig):
     name = "tracker"
 
     def ready(self):
-        """Register the current calibrated matcher for application-wide use."""
+        """Register runtime models, the active matcher, and input invalidation."""
 
+        from . import evaluation_models  # noqa: F401
         from .services import strategy_matching
         from .services.semantic_strategy_matching import (
             analyze_job_match as analyze_controlled_semantic_match,
@@ -17,3 +18,6 @@ class TrackerConfig(AppConfig):
         # this stable facade lets the active strategy evolve without duplicating
         # matching calls throughout the application.
         strategy_matching.analyze_job_match = analyze_controlled_semantic_match
+
+        from . import evaluation_admin  # noqa: F401,E402
+        from . import evaluation_signals  # noqa: F401,E402
