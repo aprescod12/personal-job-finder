@@ -37,7 +37,10 @@ _SECTION_ALIASES = {
 }
 
 _EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
-_PHONE_PATTERN = re.compile(r"(?<!\w)(?:\+?\d[\d().\s-]{7,}\d)(?!\w)")
+_PHONE_PATTERN = re.compile(
+    r"(?<!\w)(?:\+?\d{1,3}[\s.-]*)?(?:\(\d{2,4}\)|\d{2,4})"
+    r"[\s.-]*\d{3}[\s.-]*\d{4}(?!\w)"
+)
 _LINK_PATTERN = re.compile(
     r"(?:https?://[^\s|]+|(?:linkedin\.com|github\.com)/[^\s|]+)",
     re.IGNORECASE,
@@ -151,7 +154,6 @@ def _generic_entries(lines):
                 )
                 subheading = candidate_heading
                 if candidate_subheading:
-                    subheading = candidate_heading
                     dates = dates or candidate_subheading
                 dates = dates or candidate_dates
                 consumed.add(1)
