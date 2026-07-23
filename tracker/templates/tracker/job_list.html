@@ -25,7 +25,7 @@
 <section class="panel evaluation-dashboard-panel">
     <div>
         <p class="eyebrow">PERSISTED MATCH HISTORY</p>
-        <h2>{{ evaluation_summary.needs_reevaluation }} JOB{{ evaluation_summary.needs_reevaluation|pluralize }} NEED REEVALUATION</h2>
+        <h2>{{ evaluation_summary.needs_reevaluation }} {% if evaluation_summary.needs_reevaluation == 1 %}JOB{% else %}JOBS{% endif %} NEED REEVALUATION</h2>
         <p>Live scores always use current inputs. Persisted runs provide the auditable before-and-after history.</p>
         <div class="evaluation-dashboard-counts">
             <article><span>CURRENT</span><strong>{{ evaluation_summary.current }}</strong></article>
