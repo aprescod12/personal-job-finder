@@ -1,0 +1,73 @@
+{% extends "tracker/base.html" %}
+{% load static %}
+
+{% block title %}Approved Candidate Claims · Amiri's Job Finder{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'candidate_profile/resume_extraction.css' %}">
+<link rel="stylesheet" href="{% static 'candidate_profile/resume_claim_review.css' %}">
+
+<p><a class="text-link" href="{% url 'candidate_profile:resume_source_list' %}">← BACK TO RESUME SOURCES</a></p>
+
+<section class="page-heading resume-extraction-heading">
+    <div>
+        <p class="eyebrow">STAGE 05 / APPROVED EVIDENCE</p>
+        <h1>ACTIVE CANDIDATE CLAIMS.</h1>
+        <p class="muted">These claims were explicitly approved during résumé review. They are separate from manually maintained career preferences and retain their source, provider, parser, and evidence provenance.</p>
+    </div>
+    <div class="resume-extraction-boundary">
+        <span>ACTIVE EVIDENCE</span>
+        <strong>{{ claim_count }} CLAIM{{ claim_count|pluralize }}</strong>
+        <small>Superseded claims remain in history but are not shown here.</small>
+    </div>
+</section>
+
+<section class="panel candidate-claim-summary">
+    <div>
+        <p class="eyebrow">PROFILE BOUNDARY</p>
+        <h2>{{ profile.full_name|upper }}</h2>
+        <p>Manual career-profile fields are still controlled on the Career Profile page. This page shows only approved résumé-derived evidence.</p>
+    </div>
+    <a class="button button-primary" href="{% url 'career_profile' %}">OPEN MANUAL CAREER PROFILE</a>
+</section>
+
+{% for group in claim_groups %}
+<section class="panel resume-extraction-section">
+    <header>
+        <div><p class="eyebrow">{{ forloop.counter|stringformat:"02d" }} / {{ group.key|upper }}</p><h2>{{ group.label|upper }}</h2></div>
+        <span>{{ group.claims|length }}</span>
+    </header>
+    <div class="candidate-claim-grid">
+        {% for claim in group.claims %}
+        <article class="candidate-claim-card">
+            {% if claim.value.heading %}
+                <h3>{{ claim.value.heading }}</h3>
+                {% if claim.value.subheading %}<strong>{{ claim.value.subheading }}</strong>{% endif %}
+                {% if claim.value.dates %}<small>{{ claim.value.dates }}</small>{% endif %}
+                {% if claim.value.details %}<ul>{% for detail in claim.value.details %}<li>{{ detail }}</li>{% endfor %}</ul>{% endif %}
+            {% else %}
+                <h3>{{ claim.value }}</h3>
+            {% endif %}
+
+            <details class="resume-claim-evidence">
+                <summary>VIEW APPROVAL PROVENANCE</summary>
+                {% if claim.source_text %}<p>{{ claim.source_text|linebreaksbr }}</p>{% endif %}
+                {% if claim.evidence_note %}<small>{{ claim.evidence_note }}</small>{% endif %}
+                <dl>
+                    <div><dt>SOURCE</dt><dd>{{ claim.source_label }} · {{ claim.source_sha256|slice:":12" }}</dd></div>
+                    <div><dt>PROVIDER</dt><dd>{{ claim.provider_key }} · {{ claim.provider_version }}</dd></div>
+                    <div><dt>READER</dt><dd>{{ claim.document_parser_key }} · {{ claim.document_parser_version }}</dd></div>
+                </dl>
+            </details>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% empty %}
+<section class="panel resume-extraction-alert">
+    <p class="eyebrow">NO ACTIVE CLAIMS</p>
+    <h2>NOTHING HAS BEEN APPROVED YET.</h2>
+    <p>Run a résumé extraction, review individual claims, and explicitly apply approved evidence.</p>
+</section>
+{% endfor %}
+{% endblock %}
