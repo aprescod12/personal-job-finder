@@ -5,6 +5,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'candidate_profile/resume_extraction.css' %}">
+<link rel="stylesheet" href="{% static 'candidate_profile/resume_claim_review.css' %}">
 
 <p><a class="text-link" href="{% url 'candidate_profile:resume_source_list' %}">← BACK TO RESUME SOURCES</a></p>
 
@@ -44,45 +45,21 @@
 </section>
 
 <section class="resume-review-status panel">
-    <div>
-        <span>PENDING</span>
-        <strong>{{ review.pending_count }}</strong>
-    </div>
-    <div>
-        <span>APPROVED</span>
-        <strong>{{ review.approved_count }}</strong>
-    </div>
-    <div>
-        <span>REJECTED</span>
-        <strong>{{ review.rejected_count }}</strong>
-    </div>
-    <div>
-        <span>APPLIED</span>
-        <strong>{{ review.applied_count }}</strong>
-    </div>
+    <div><span>PENDING</span><strong>{{ review.pending_count }}</strong></div>
+    <div><span>APPROVED</span><strong>{{ review.approved_count }}</strong></div>
+    <div><span>REJECTED</span><strong>{{ review.rejected_count }}</strong></div>
+    <div><span>APPLIED</span><strong>{{ review.applied_count }}</strong></div>
     <a class="button button-secondary" href="{% url 'candidate_profile:candidate_claim_list' %}">VIEW {{ active_approved_claim_count }} ACTIVE CLAIM{{ active_approved_claim_count|pluralize }}</a>
 </section>
 
 {% if review.orchestration %}
 <section class="panel resume-extraction-alert">
     <p class="eyebrow">PROVIDER ATTEMPTS</p>
-    <h2>
-        {% if review.orchestration.manual_review_required %}
-        MANUAL REVIEW REQUIRED.
-        {% elif review.orchestration.fallback_used %}
-        DETERMINISTIC FALLBACK USED.
-        {% else %}
-        PRIMARY EXTRACTOR SUCCEEDED.
-        {% endif %}
-    </h2>
+    <h2>{% if review.orchestration.manual_review_required %}MANUAL REVIEW REQUIRED.{% elif review.orchestration.fallback_used %}DETERMINISTIC FALLBACK USED.{% else %}PRIMARY EXTRACTOR SUCCEEDED.{% endif %}</h2>
     <p class="muted">Status: {{ review.orchestration.status }} · Total: {{ review.orchestration.total_elapsed_ms }} ms</p>
     <ul>
         {% for attempt in review.orchestration.attempts %}
-        <li>
-            {% if attempt.provider.label %}{{ attempt.provider.label }}{% else %}{{ attempt.provider_path }}{% endif %}
-            — {% if attempt.success %}success{% else %}failed: {{ attempt.error_category }} · {{ attempt.error_message }}{% endif %}
-            ({{ attempt.elapsed_ms }} ms)
-        </li>
+        <li>{% if attempt.provider.label %}{{ attempt.provider.label }}{% else %}{{ attempt.provider_path }}{% endif %} — {% if attempt.success %}success{% else %}failed: {{ attempt.error_category }} · {{ attempt.error_message }}{% endif %} ({{ attempt.elapsed_ms }} ms)</li>
         {% endfor %}
     </ul>
 </section>
@@ -105,10 +82,7 @@
     {% for group in claim_groups %}
     <section class="panel resume-extraction-section resume-review-section">
         <header>
-            <div>
-                <p class="eyebrow">{{ forloop.counter|stringformat:"02d" }} / {{ group.key|upper }}</p>
-                <h2>{{ group.label|upper }}</h2>
-            </div>
+            <div><p class="eyebrow">{{ forloop.counter|stringformat:"02d" }} / {{ group.key|upper }}</p><h2>{{ group.label|upper }}</h2></div>
             <span>{{ group.items|length }}</span>
         </header>
 
@@ -116,16 +90,11 @@
             {% for item in group.items %}
             <article class="resume-review-claim{% if item.claim.is_applied %} resume-review-claim-applied{% endif %}">
                 <div class="resume-review-claim-heading">
-                    <div>
-                        <span>{{ item.claim.field_path }}</span>
-                        <strong>CLAIM {{ forloop.counter }}</strong>
-                    </div>
+                    <div><span>{{ item.claim.field_path }}</span><strong>CLAIM {{ forloop.counter }}</strong></div>
                     {% if item.claim.is_applied %}<b>APPLIED · LOCKED</b>{% endif %}
                 </div>
 
-                {% if item.form.non_field_errors %}
-                <div class="field-error">{{ item.form.non_field_errors }}</div>
-                {% endif %}
+                {% if item.form.non_field_errors %}<div class="field-error">{{ item.form.non_field_errors }}</div>{% endif %}
 
                 <div class="resume-review-decision">
                     <label for="{{ item.form.decision.id_for_label }}">DECISION</label>
@@ -135,33 +104,13 @@
 
                 {% if item.claim.claim_type == "entry" %}
                 <div class="resume-review-entry-fields">
-                    <div class="form-field">
-                        <label for="{{ item.form.heading.id_for_label }}">HEADING</label>
-                        {{ item.form.heading }}
-                        {% for error in item.form.heading.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-                    </div>
-                    <div class="form-field">
-                        <label for="{{ item.form.subheading.id_for_label }}">SUBHEADING / ORGANIZATION</label>
-                        {{ item.form.subheading }}
-                        {% for error in item.form.subheading.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-                    </div>
-                    <div class="form-field">
-                        <label for="{{ item.form.dates.id_for_label }}">DATES</label>
-                        {{ item.form.dates }}
-                        {% for error in item.form.dates.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-                    </div>
-                    <div class="form-field resume-review-details-field">
-                        <label for="{{ item.form.details.id_for_label }}">DETAILS — ONE PER LINE</label>
-                        {{ item.form.details }}
-                        {% for error in item.form.details.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-                    </div>
+                    <div class="form-field"><label for="{{ item.form.heading.id_for_label }}">HEADING</label>{{ item.form.heading }}{% for error in item.form.heading.errors %}<p class="field-error">{{ error }}</p>{% endfor %}</div>
+                    <div class="form-field"><label for="{{ item.form.subheading.id_for_label }}">SUBHEADING / ORGANIZATION</label>{{ item.form.subheading }}{% for error in item.form.subheading.errors %}<p class="field-error">{{ error }}</p>{% endfor %}</div>
+                    <div class="form-field"><label for="{{ item.form.dates.id_for_label }}">DATES</label>{{ item.form.dates }}{% for error in item.form.dates.errors %}<p class="field-error">{{ error }}</p>{% endfor %}</div>
+                    <div class="form-field resume-review-details-field"><label for="{{ item.form.details.id_for_label }}">DETAILS — ONE PER LINE</label>{{ item.form.details }}{% for error in item.form.details.errors %}<p class="field-error">{{ error }}</p>{% endfor %}</div>
                 </div>
                 {% else %}
-                <div class="form-field">
-                    <label for="{{ item.form.value_text.id_for_label }}">REVIEWED VALUE</label>
-                    {{ item.form.value_text }}
-                    {% for error in item.form.value_text.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
-                </div>
+                <div class="form-field"><label for="{{ item.form.value_text.id_for_label }}">REVIEWED VALUE</label>{{ item.form.value_text }}{% for error in item.form.value_text.errors %}<p class="field-error">{{ error }}</p>{% endfor %}</div>
                 {% endif %}
 
                 <details class="resume-claim-evidence">
@@ -175,17 +124,11 @@
         </div>
     </section>
     {% empty %}
-    <section class="panel resume-extraction-alert">
-        <h2>NO STRUCTURED CLAIMS WERE PRODUCED.</h2>
-        <p>Close this review and inspect the locally extracted document text.</p>
-    </section>
+    <section class="panel resume-extraction-alert"><h2>NO STRUCTURED CLAIMS WERE PRODUCED.</h2><p>Close this review and inspect the locally extracted document text.</p></section>
     {% endfor %}
 
     {% if document %}
-    <details class="panel resume-raw-text">
-        <summary>VIEW LOCALLY EXTRACTED DOCUMENT TEXT</summary>
-        <pre>{{ document.text }}</pre>
-    </details>
+    <details class="panel resume-raw-text"><summary>VIEW LOCALLY EXTRACTED DOCUMENT TEXT</summary><pre>{{ document.text }}</pre></details>
     {% endif %}
 
     <section class="panel resume-extraction-final">
@@ -202,14 +145,7 @@
 </form>
 
 <section class="panel resume-review-close">
-    <div>
-        <p class="eyebrow">CLOSE REVIEW</p>
-        <h2>STOP WITHOUT APPLYING PENDING CLAIMS.</h2>
-        <p>Any claims already applied remain active. All remaining pending claims will be treated as rejected.</p>
-    </div>
-    <form method="post" action="{% url 'candidate_profile:clear_resume_extraction' %}">
-        {% csrf_token %}
-        <button class="button button-danger" type="submit">CLOSE THIS REVIEW</button>
-    </form>
+    <div><p class="eyebrow">CLOSE REVIEW</p><h2>STOP WITHOUT APPLYING PENDING CLAIMS.</h2><p>Any claims already applied remain active. All remaining pending claims will be treated as rejected.</p></div>
+    <form method="post" action="{% url 'candidate_profile:clear_resume_extraction' %}">{% csrf_token %}<button class="button button-danger" type="submit">CLOSE THIS REVIEW</button></form>
 </section>
 {% endblock %}
