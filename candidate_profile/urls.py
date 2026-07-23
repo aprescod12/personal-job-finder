@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     activate_resume_source,
+    candidate_claim_list,
     clear_resume_extraction,
     delete_resume_source,
     resume_extraction_review,
@@ -14,6 +15,7 @@ app_name = "candidate_profile"
 
 urlpatterns = [
     path("", resume_source_list, name="resume_source_list"),
+    path("claims/", candidate_claim_list, name="candidate_claim_list"),
     path(
         "<int:source_id>/activate/",
         activate_resume_source,
