@@ -1,6 +1,13 @@
 from django.test import TestCase
 from django.urls import reverse
 
+from candidate_profile.models import CandidateProfileClaim, ResumeReviewClaim
+from candidate_profile.services.candidate_profile_composition import (
+    COMPOSITION_VERSION,
+    activate_candidate_profile_snapshot,
+    compose_candidate_profile_snapshot,
+)
+
 from .models import CareerProfile, JobPosting, JobRequirement
 from .services.semantic_similarity import (
     SEMANTIC_STRENGTH_CAP,
@@ -70,6 +77,30 @@ class ControlledSemanticSimilarityTests(TestCase):
             hard_disqualifiers=hard_disqualifiers,
         )
         return job, requirements
+
+    def activate_candidate_snapshot(self):
+        CandidateProfileClaim.objects.create(
+            profile=self.profile,
+            section=ResumeReviewClaim.Section.SKILLS,
+            claim_key="profile.skills.snapshot-test",
+            field_path="profile.skills",
+            semantic_key="snapshot-test-python",
+            value="Python",
+            source_text="Python",
+            evidence_note="Approved test evidence",
+            source_sha256="a" * 64,
+            source_label="Test résumé",
+            source_filename="resume.txt",
+            provider_key="test-provider",
+            provider_version="test-v1",
+            provider_mode="ai",
+            document_parser_key="plain-text",
+            document_parser_version="reader-v1",
+            is_active=True,
+        )
+        snapshot, _ = compose_candidate_profile_snapshot(self.profile)
+        activate_candidate_profile_snapshot(snapshot)
+        return snapshot
 
     def test_paraphrased_instrumentation_evidence_receives_semantic_credit(self):
         job, requirements = self.make_job()
@@ -184,6 +215,25 @@ class ControlledSemanticSimilarityTests(TestCase):
         self.assertContains(response, "Biosignal and instrumentation")
         self.assertContains(response, "can never satisfy experience")
         self.assertContains(response, MATCHER_VERSION)
+        self.assertContains(response, "CANDIDATE PROFILE · MANUAL ONLY")
+
+    def test_match_page_displays_active_candidate_snapshot_audit_label(self):
+        snapshot = self.activate_candidate_snapshot()
+        job, _ = self.make_job()
+
+        response = self.client.get(reverse("job_match", args=[job.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"CANDIDATE PROFILE V{snapshot.version}")
+        self.assertContains(response, COMPOSITION_VERSION)
+        self.assertContains(
+            response,
+            reverse(
+                "candidate_profile:candidate_snapshot_detail",
+                args=[snapshot.id],
+            ),
+        )
+        self.assertNotContains(response, "CANDIDATE PROFILE · MANUAL ONLY")
 
     def test_dashboard_uses_controlled_semantic_matcher(self):
         job, _ = self.make_job()
