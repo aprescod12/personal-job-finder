@@ -1,0 +1,126 @@
+{% extends "tracker/base.html" %}
+{% load static %}
+
+{% block title %}Evaluation History · {{ job.title }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'tracker/evaluation_history.css' %}">
+
+<p><a class="text-link" href="{% url 'job_match' job.id %}">← BACK TO MATCH ANALYSIS</a></p>
+
+<section class="page-heading evaluation-history-heading">
+    <div>
+        <p class="eyebrow">PROFILE CHANGE / REEVALUATION</p>
+        <h1>EVALUATION HISTORY.</h1>
+        <p class="muted">{{ job.title }} · {{ job.company }}</p>
+        <p class="muted">Every run preserves the candidate-profile version, matcher version, score, lane, evidence, and change from the previous run.</p>
+    </div>
+    <form method="post" action="{% url 'reevaluate_job' job.id %}">
+        {% csrf_token %}
+        <button class="button button-primary" type="submit">REEVALUATE NOW</button>
+    </form>
+</section>
+
+{% if current_run %}
+<section class="panel evaluation-current-card">
+    <div>
+        <p class="eyebrow">CURRENT PERSISTED RESULT</p>
+        <h2>{{ current_run.score|default:"—" }}/100 · {{ current_run.classification|default:"Needs requirements" }}</h2>
+        <p>{{ current_run.track }} · {{ current_run.matcher_version }}</p>
+    </div>
+    <div>
+        <span>CANDIDATE PROFILE</span>
+        <strong>{% if current_run.candidate_snapshot_version %}V{{ current_run.candidate_snapshot_version }}{% else %}MANUAL ONLY{% endif %}</strong>
+        <small>{{ current_run.candidate_snapshot_composition_version }}</small>
+    </div>
+</section>
+{% else %}
+<section class="panel evaluation-stale-banner">
+    <strong>NO CURRENT PERSISTED EVALUATION</strong>
+    <span>The latest historical result is stale or this job has never been evaluated. The live Match Analysis still calculates from current inputs.</span>
+</section>
+{% endif %}
+
+<section class="evaluation-history-list">
+    {% for run in runs %}
+    <article class="panel evaluation-run-card{% if run.is_current %} evaluation-run-current{% else %} evaluation-run-stale{% endif %}">
+        <header>
+            <div>
+                <span>{% if run.is_current %}CURRENT{% else %}HISTORICAL / STALE{% endif %}</span>
+                <h2>{{ run.score|default:"—" }}/100 · {{ run.classification|default:"Needs requirements" }}</h2>
+                <p>{{ run.evaluated_at|date:"M j, Y, g:i a" }} · {{ run.get_trigger_display }}</p>
+            </div>
+            <div class="evaluation-run-delta">
+                <span>SCORE CHANGE</span>
+                <strong>
+                    {% if run.score_delta == None %}FIRST RUN{% elif run.score_delta > 0 %}+{{ run.score_delta }}{% else %}{{ run.score_delta }}{% endif %}
+                </strong>
+            </div>
+        </header>
+
+        <dl class="evaluation-meta-grid">
+            <div><dt>MATCHER</dt><dd>{{ run.matcher_version }}</dd></div>
+            <div><dt>PROFILE</dt><dd>{% if run.candidate_snapshot_version %}V{{ run.candidate_snapshot_version }}{% else %}Manual only{% endif %}</dd></div>
+            <div><dt>LANE</dt><dd>{{ run.track|default:"Not classified" }}</dd></div>
+            <div><dt>EVIDENCE COVERAGE</dt><dd>{{ run.evidence_coverage }}%</dd></div>
+        </dl>
+
+        {% if run.stale_reasons %}
+        <div class="evaluation-stale-reasons">
+            <strong>WHY THIS RUN IS STALE</strong>
+            <ul>{% for reason in run.stale_reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+        </div>
+        {% endif %}
+
+        {% if run.previous_run %}
+        <div class="evaluation-change-grid">
+            <article>
+                <span>NEW DIRECT EVIDENCE</span>
+                <strong>{{ run.comparison_data.added_direct|length }}</strong>
+                {% for item in run.comparison_data.added_direct %}<small>{{ item.requirement }}</small>{% empty %}<small>None</small>{% endfor %}
+            </article>
+            <article>
+                <span>NEW RELATED EVIDENCE</span>
+                <strong>{{ run.comparison_data.added_related|length }}</strong>
+                {% for item in run.comparison_data.added_related %}<small>{{ item.requirement }}</small>{% empty %}<small>None</small>{% endfor %}
+            </article>
+            <article>
+                <span>RESOLVED GAPS</span>
+                <strong>{{ run.comparison_data.resolved_gaps|length }}</strong>
+                {% for item in run.comparison_data.resolved_gaps %}<small>{{ item.requirement }}</small>{% empty %}<small>None</small>{% endfor %}
+            </article>
+            <article>
+                <span>NEW GAPS</span>
+                <strong>{{ run.comparison_data.new_gaps|length }}</strong>
+                {% for item in run.comparison_data.new_gaps %}<small>{{ item.requirement }}</small>{% empty %}<small>None</small>{% endfor %}
+            </article>
+        </div>
+        {% endif %}
+
+        <details class="evaluation-result-details">
+            <summary>VIEW STORED RESULT DETAILS</summary>
+            <div class="evaluation-result-columns">
+                <article>
+                    <h3>DIRECT MATCHES</h3>
+                    {% for item in run.result_data.direct_matches %}<p><strong>{{ item.requirement }}</strong><br>{{ item.evidence }}</p>{% empty %}<p class="muted">None stored.</p>{% endfor %}
+                </article>
+                <article>
+                    <h3>RELATED + SEMANTIC</h3>
+                    {% for item in run.result_data.related_matches %}<p><strong>{{ item.requirement }}</strong><br>{{ item.evidence }}</p>{% endfor %}
+                    {% for item in run.result_data.semantic_matches %}<p><strong>{{ item.requirement }}</strong><br>{{ item.evidence }}</p>{% empty %}{% if not run.result_data.related_matches %}<p class="muted">None stored.</p>{% endif %}{% endfor %}
+                </article>
+                <article>
+                    <h3>GAPS</h3>
+                    {% for item in run.result_data.gaps %}<p>{{ item.requirement }}</p>{% empty %}<p class="muted">None stored.</p>{% endfor %}
+                </article>
+            </div>
+        </details>
+    </article>
+    {% empty %}
+    <section class="panel evaluation-empty-state">
+        <h2>NO EVALUATION RUNS YET.</h2>
+        <p>Create the first persisted run to establish a baseline for future résumé and profile changes.</p>
+    </section>
+    {% endfor %}
+</section>
+{% endblock %}
