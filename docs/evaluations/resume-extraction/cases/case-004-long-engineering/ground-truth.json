@@ -1,0 +1,93 @@
+{
+  "schema_version": "resume-extraction-evaluation-case-v1",
+  "case_id": "case-004-long-engineering",
+  "title": "Long multi-section engineering resume",
+  "category": "long_resume",
+  "expected": {
+    "identity": {
+      "full_name": "Taylor Morgan",
+      "email": "taylor.morgan@example.com",
+      "phone": "+1 555-010-2244",
+      "location": "",
+      "links": [
+        "github.com/tmorgan-engineering"
+      ]
+    },
+    "profile": {
+      "professional_summary": "Electrical engineer pursuing graduate study in biomedical engineering with experience in embedded systems, sensing, and technical operations.",
+      "education_headings": [
+        "Northfield University"
+      ],
+      "experience_headings": [
+        "Biomedical Research Assistant",
+        "Facilities Team Lead",
+        "Electrical Maintenance Intern",
+        "AI Learning Intern",
+        "IT Support Intern"
+      ],
+      "project_headings": [
+        "Baseball Bat Tracking System",
+        "Wearable Medical Monitoring Device",
+        "Event Staffing Platform",
+        "Track Training Application",
+        "Connected Alarm Clock",
+        "Engineering Portfolio Website",
+        "Four-Floor Elevator Controller",
+        "Cloud Security System"
+      ],
+      "skills": [
+        "Python",
+        "C",
+        "C++",
+        "MATLAB",
+        "JavaScript",
+        "TypeScript",
+        "SQL",
+        "Embedded systems",
+        "Signal processing",
+        "Test and validation",
+        "Leadership",
+        "Teamwork",
+        "Critical Thinking",
+        "Time Management",
+        "Problem Solving",
+        "Communication"
+      ],
+      "certification_headings": [],
+      "leadership_headings": [
+        "NCAA Student-Athlete",
+        "Engineering Society Outreach Chair",
+        "Engineering Society Senator",
+        "International Student Leader"
+      ]
+    }
+  },
+  "critical_claims": [
+    {
+      "path": "profile.experience_headings",
+      "expected_text": "Biomedical Research Assistant",
+      "source_quote": "Biomedical Research Assistant"
+    },
+    {
+      "path": "profile.project_headings",
+      "expected_text": "Wearable Medical Monitoring Device",
+      "source_quote": "Wearable Medical Monitoring Device"
+    },
+    {
+      "path": "profile.skills",
+      "expected_text": "Python",
+      "source_quote": "Python, C, C++, MATLAB, JavaScript, TypeScript, SQL, Embedded systems, Signal processing, Test and validation"
+    },
+    {
+      "path": "profile.leadership_headings",
+      "expected_text": "Engineering Society Outreach Chair",
+      "source_quote": "Engineering Society Outreach Chair"
+    }
+  ],
+  "forbidden_claims": [
+    "Ph.D. Biomedical Engineering",
+    "FDA certification",
+    "Principal Engineer",
+    "Rust"
+  ]
+}

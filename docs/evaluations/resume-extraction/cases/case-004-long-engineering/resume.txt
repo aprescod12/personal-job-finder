@@ -1,0 +1,94 @@
+Taylor Morgan
+taylor.morgan@example.com | +1 555-010-2244 | Northfield, PA | github.com/tmorgan-engineering
+
+Professional Summary
+Electrical engineer pursuing graduate study in biomedical engineering with experience in embedded systems, sensing, and technical operations.
+
+Education
+Northfield University
+M.S. Biomedical Engineering Candidate | Expected May 2027
+B.S. Electrical Engineering, Minor in Computer Science | May 2026
+
+Experience
+Biomedical Research Assistant
+Northfield University | Fall 2025 - Summer 2026
+Acquired biomedical signals for human performance research.
+Troubleshot an earlier sensor prototype and documented hardware behavior.
+Built a desktop application to present collected data.
+
+Facilities Team Lead
+Northfield University Athletics | Fall 2023 - Summer 2026
+Led student employees through daily facility operations.
+Coordinated task assignments and issue escalation.
+
+Electrical Maintenance Intern
+National Energy Company | Summer 2025
+Supported electrical, telecommunications, and instrumentation maintenance.
+Participated in site inspections, troubleshooting, and operational diagnostics.
+
+AI Learning Intern
+Applied Intelligence Lab | Summer 2024
+Studied large language models, deep learning, and responsible AI applications.
+Analyzed technical use cases through guided instruction.
+
+IT Support Intern
+Regional Payments Company | Summer 2021
+Resolved customer account issues and duplicate records.
+Organized operational data to support internal workflows.
+
+Projects
+Baseball Bat Tracking System
+Azure Kinect, inertial measurement unit, virtual reality
+Generated swing feedback metrics and rendered a three-dimensional swing path.
+
+Wearable Medical Monitoring Device
+ESP32, embedded C, sensors
+Integrated fall detection, sleep-state analysis, and emergency alerts.
+Designed deterministic event handling for rapid safety response.
+
+Event Staffing Platform
+Django, PostgreSQL, email automation
+Built role-based shift registration, waitlists, attendance tracking, and reporting.
+Implemented conflict detection, capacity controls, timed releases, and waitlist promotion.
+
+Track Training Application
+React Native, Supabase
+Built workout logging and performance tracking for track athletes.
+Designed scalable data models and responsive mobile screens.
+
+Connected Alarm Clock
+ESP32, NTP, OLED, I2S audio
+Built a WiFi-connected alarm clock with synchronized time and audio playback.
+
+Engineering Portfolio Website
+Next.js, TypeScript, Tailwind CSS
+Built and deployed a recruiter-focused portfolio with dynamic routing and SEO.
+
+Four-Floor Elevator Controller
+ESP32, SCAN scheduling
+Engineered state-driven floor servicing with debounced inputs and cooperative multitasking.
+
+Cloud Security System
+Particle Photon, motion sensing
+Developed a cloud-connected alarm with remote arming and false-positive filtering.
+
+Leadership and Activities
+NCAA Student-Athlete
+Northfield University Track and Field | Fall 2022 - Spring 2026
+Competed at the conference level while balancing engineering coursework.
+
+Engineering Society Outreach Chair
+Northfield University | Spring 2023 - Spring 2026
+Organized STEM outreach events for local high school students.
+
+Engineering Society Senator
+Northfield University | Spring 2024
+Represented the chapter at conferences and elections.
+
+International Student Leader
+Northfield University Athletics | Fall 2024 - Spring 2026
+Hosted community events for international student-athletes.
+
+Technical Skills
+Python, C, C++, MATLAB, JavaScript, TypeScript, SQL, Embedded systems, Signal processing, Test and validation
+Leadership, Teamwork, Critical Thinking, Time Management, Problem Solving, Communication

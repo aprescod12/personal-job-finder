@@ -152,21 +152,30 @@ RESUME_FALLBACK_EXTRACTOR = os.getenv(
     "candidate_profile.services.resume_deterministic.DeterministicResumeExtractor",
 ).strip()
 
-# OpenAI resume extraction sends only locally parsed text, requests strict JSON,
-# and keeps the returned draft in the existing review-only workflow.
+# OpenAI resume extraction sends only locally parsed text and asks the model for
+# compact claims-only JSON. Exact evidence excerpts are generated locally after
+# validation. One bounded retry is allowed only for an output-limit response.
 OPENAI_RESUME_EXTRACTION_MODEL = (
     os.getenv("OPENAI_RESUME_EXTRACTION_MODEL", "gpt-5-mini").strip()
     or "gpt-5-mini"
 )
 OPENAI_RESUME_EXTRACTION_TIMEOUT_SECONDS = _env_positive_int(
     "OPENAI_RESUME_EXTRACTION_TIMEOUT_SECONDS",
-    30,
+    120,
 )
 OPENAI_RESUME_EXTRACTION_MAX_OUTPUT_TOKENS = _env_positive_int(
     "OPENAI_RESUME_EXTRACTION_MAX_OUTPUT_TOKENS",
-    5000,
+    8000,
+)
+OPENAI_RESUME_EXTRACTION_RETRY_MAX_OUTPUT_TOKENS = _env_positive_int(
+    "OPENAI_RESUME_EXTRACTION_RETRY_MAX_OUTPUT_TOKENS",
+    12000,
 )
 OPENAI_RESUME_EXTRACTION_MAX_INPUT_CHARS = _env_positive_int(
     "OPENAI_RESUME_EXTRACTION_MAX_INPUT_CHARS",
     60000,
+)
+OPENAI_RESUME_EXTRACTION_REASONING_EFFORT = (
+    os.getenv("OPENAI_RESUME_EXTRACTION_REASONING_EFFORT", "low").strip()
+    or "low"
 )

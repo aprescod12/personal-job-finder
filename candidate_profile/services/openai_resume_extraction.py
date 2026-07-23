@@ -7,7 +7,7 @@ from typing import Any
 
 from django.conf import settings
 
-from .ai_resume_extraction import StructuredAIResumeExtractor
+from .compact_ai_resume_extraction import CompactStructuredAIResumeExtractor
 from .resume_extraction import (
     ERROR_CONFIGURATION,
     ERROR_INVALID_RESPONSE,
@@ -16,11 +16,12 @@ from .resume_extraction import (
 )
 
 
-OPENAI_RESUME_BACKEND_VERSION = "openai-responses-resume-v3"
+OPENAI_RESUME_BACKEND_VERSION = "openai-responses-resume-v4"
+_MAX_OUTPUT_REASONS = {"max_tokens", "max_output_tokens"}
 
 
 class OpenAIResumeResponsesBackend:
-    """Structured-output backend for resume extraction with the Responses API."""
+    """Structured-output backend with one bounded output-limit retry."""
 
     def __init__(
         self,
@@ -28,7 +29,9 @@ class OpenAIResumeResponsesBackend:
         model: str | None = None,
         timeout_seconds: int | None = None,
         max_output_tokens: int | None = None,
+        retry_max_output_tokens: int | None = None,
         max_input_chars: int | None = None,
+        reasoning_effort: str | None = None,
         client: Any | None = None,
     ):
         self.model = (
@@ -38,18 +41,31 @@ class OpenAIResumeResponsesBackend:
         self.timeout_seconds = timeout_seconds or getattr(
             settings,
             "OPENAI_RESUME_EXTRACTION_TIMEOUT_SECONDS",
-            30,
+            120,
         )
         self.max_output_tokens = max_output_tokens or getattr(
             settings,
             "OPENAI_RESUME_EXTRACTION_MAX_OUTPUT_TOKENS",
-            5000,
+            8000,
+        )
+        configured_retry_tokens = retry_max_output_tokens or getattr(
+            settings,
+            "OPENAI_RESUME_EXTRACTION_RETRY_MAX_OUTPUT_TOKENS",
+            12000,
+        )
+        self.retry_max_output_tokens = max(
+            self.max_output_tokens,
+            configured_retry_tokens,
         )
         self.max_input_chars = max_input_chars or getattr(
             settings,
             "OPENAI_RESUME_EXTRACTION_MAX_INPUT_CHARS",
             60000,
         )
+        self.reasoning_effort = (
+            reasoning_effort
+            or getattr(settings, "OPENAI_RESUME_EXTRACTION_REASONING_EFFORT", "low")
+        ).strip()
         self.client = client
 
     def _get_client(self):
@@ -130,6 +146,49 @@ class OpenAIResumeResponsesBackend:
                     return str(getattr(content_item, "refusal", "")).strip()
         return ""
 
+    @staticmethod
+    def _incomplete_reason(response: Any) -> str:
+        details = getattr(response, "incomplete_details", None)
+        if isinstance(details, Mapping):
+            reason = details.get("reason", "")
+        else:
+            reason = getattr(details, "reason", "")
+        reason = str(reason or "").strip()
+        if reason in _MAX_OUTPUT_REASONS:
+            return "max_output_tokens"
+        if reason == "content_filter":
+            return "content_filter"
+        return "unknown"
+
+    def _request_payload(
+        self,
+        *,
+        schema_name: str,
+        schema: Mapping[str, Any],
+        instructions: str,
+        input_text: str,
+        max_output_tokens: int,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "instructions": instructions,
+            "input": input_text,
+            "text": {
+                "format": {
+                    "type": "json_schema",
+                    "name": schema_name,
+                    "schema": dict(schema),
+                    "strict": True,
+                }
+            },
+            "max_output_tokens": max_output_tokens,
+            "store": False,
+            "timeout": self.timeout_seconds,
+        }
+        if self.reasoning_effort:
+            payload["reasoning"] = {"effort": self.reasoning_effort}
+        return payload
+
     def generate_structured(
         self,
         *,
@@ -149,34 +208,65 @@ class OpenAIResumeResponsesBackend:
                 category=ERROR_CONFIGURATION,
             )
 
-        try:
-            response = self._get_client().responses.create(
-                model=self.model,
-                instructions=instructions,
-                input=input_text,
-                text={
-                    "format": {
-                        "type": "json_schema",
-                        "name": schema_name,
-                        "schema": dict(schema),
-                        "strict": True,
-                    }
-                },
-                max_output_tokens=self.max_output_tokens,
-                store=False,
-                timeout=self.timeout_seconds,
-            )
-        except ResumeExtractionError:
-            raise
-        except Exception as exc:
-            raise self._provider_error(exc) from exc
+        client = self._get_client()
+        token_budgets = [self.max_output_tokens]
+        if self.retry_max_output_tokens > self.max_output_tokens:
+            token_budgets.append(self.retry_max_output_tokens)
 
-        status = str(getattr(response, "status", "") or "").strip()
-        if status and status != "completed":
+        response = None
+        used_output_retry = False
+        for attempt_index, token_budget in enumerate(token_budgets):
+            try:
+                response = client.responses.create(
+                    **self._request_payload(
+                        schema_name=schema_name,
+                        schema=schema,
+                        instructions=instructions,
+                        input_text=input_text,
+                        max_output_tokens=token_budget,
+                    )
+                )
+            except ResumeExtractionError:
+                raise
+            except Exception as exc:
+                raise self._provider_error(exc) from exc
+
+            status = str(getattr(response, "status", "") or "").strip()
+            if not status or status == "completed":
+                break
+
+            if status == "incomplete":
+                reason = self._incomplete_reason(response)
+                can_retry = (
+                    reason == "max_output_tokens"
+                    and attempt_index == 0
+                    and len(token_budgets) > 1
+                )
+                if can_retry:
+                    used_output_retry = True
+                    continue
+                if reason == "max_output_tokens":
+                    raise ResumeExtractionError(
+                        "OpenAI resume extraction reached the output limit after one bounded retry (reason: max_output_tokens).",
+                        category=ERROR_INVALID_RESPONSE,
+                        retryable=False,
+                    )
+                raise ResumeExtractionError(
+                    f"OpenAI resume extraction did not complete successfully (reason: {reason}).",
+                    category=ERROR_INVALID_RESPONSE,
+                    retryable=False,
+                )
+
             raise ResumeExtractionError(
                 f"OpenAI resume extraction did not complete successfully (status: {status}).",
-                category=ERROR_INVALID_RESPONSE,
-                retryable=status in {"incomplete", "queued", "in_progress"},
+                category=ERROR_PROVIDER_FAILURE,
+                retryable=status in {"queued", "in_progress"},
+            )
+
+        if response is None:  # pragma: no cover - defensive boundary
+            raise ResumeExtractionError(
+                "OpenAI resume extraction returned no response.",
+                category=ERROR_PROVIDER_FAILURE,
             )
 
         output_text = str(getattr(response, "output_text", "") or "").strip()
@@ -203,10 +293,17 @@ class OpenAIResumeResponsesBackend:
                 "OpenAI returned resume JSON whose top-level value was not an object.",
                 category=ERROR_INVALID_RESPONSE,
             )
+
+        if used_output_retry and isinstance(payload.get("warnings"), list):
+            payload = dict(payload)
+            payload["warnings"] = [
+                *payload["warnings"],
+                "OpenAI completed extraction after one bounded output-limit retry.",
+            ]
         return payload
 
 
-class OpenAIResumeExtractor(StructuredAIResumeExtractor):
+class OpenAIResumeExtractor(CompactStructuredAIResumeExtractor):
     provider_key = "openai_resume_structured"
     provider_label = "OpenAI structured resume extractor"
     provider_version = OPENAI_RESUME_BACKEND_VERSION
