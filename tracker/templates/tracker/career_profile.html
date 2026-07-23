@@ -5,18 +5,21 @@
 {% block content %}
 <section class="profile-hero">
     <div class="profile-hero-copy">
-        <p class="eyebrow">STAGE 05 / APPROVED CANDIDATE PROFILE</p>
+        <p class="eyebrow">STAGE 05 / MANUAL CAREER STRATEGY</p>
         <h1>CAREER PROFILE</h1>
         <p class="profile-intro">
-            This remains the approved structured source of truth used by job matching.
-            Resume files are stored separately and cannot change these fields until a later extraction and human-review step.
+            These fields remain the manually controlled source of truth for career direction, preferences, eligibility, priorities, and deal-breakers. Job matching combines them with résumé evidence only when a composed candidate-profile version has been explicitly activated.
         </p>
-        <a class="button button-secondary" href="{% url 'candidate_profile:resume_source_list' %}">MANAGE RESUME SOURCES</a>
+        <div class="detail-actions">
+            <a class="button button-secondary" href="{% url 'candidate_profile:resume_source_list' %}">MANAGE RESUME SOURCES</a>
+            <a class="button button-secondary" href="{% url 'candidate_profile:candidate_claim_list' %}">APPROVED CLAIMS</a>
+            <a class="button button-primary" href="{% url 'candidate_profile:candidate_snapshot_list' %}">PROFILE VERSIONS</a>
+        </div>
     </div>
     <div class="profile-status-card">
         <span class="profile-status-dot" aria-hidden="true"></span>
         <div>
-            <strong>PROFILE ACTIVE</strong>
+            <strong>MANUAL STRATEGY ACTIVE</strong>
             <small>LAST UPDATED {{ profile.updated_at|date:"M j, Y"|upper }}</small>
         </div>
     </div>
@@ -96,8 +99,8 @@
 
     <div class="profile-save-bar">
         <div>
-            <strong>SAVE THE APPROVED SOURCE OF TRUTH</strong>
-            <span>Job-match analysis uses these reviewed fields. Stored resume sources remain evidence until separately extracted and approved.</span>
+            <strong>SAVE MANUAL CAREER STRATEGY</strong>
+            <span>These settings remain under your direct control. Activated résumé evidence is versioned separately and never overwrites this form.</span>
         </div>
         <button class="button button-primary profile-save-button" type="submit">SAVE CAREER PROFILE</button>
     </div>
