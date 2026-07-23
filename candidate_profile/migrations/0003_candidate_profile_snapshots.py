@@ -129,7 +129,7 @@ class Migration(migrations.Migration):
             model_name="candidateprofilesnapshot",
             index=models.Index(
                 fields=["fingerprint"],
-                name="candidate_snapshot_fingerprint_idx",
+                name="candidate_snapshot_fp_idx",
             ),
         ),
         migrations.AddConstraint(
