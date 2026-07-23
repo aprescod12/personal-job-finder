@@ -128,7 +128,7 @@ def _extract_pdf_page_text(page) -> tuple[str, bool]:
             layout_mode_scale_weight=PDF_LAYOUT_SCALE_WEIGHT,
         )
         return text or "", True
-    except TypeError:
+    except (TypeError, KeyError):
         return page.extract_text() or "", False
 
 
