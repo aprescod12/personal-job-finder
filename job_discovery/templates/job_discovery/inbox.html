@@ -21,6 +21,17 @@
     </form>
 </section>
 
+<section class="panel discovery-live-note{% if live_discovery_enabled %} discovery-live-enabled{% endif %}">
+    <div>
+        <p class="eyebrow">LIVE NETWORK CONTROL</p>
+        <h2>{% if live_discovery_enabled %}LIVE DISCOVERY ENABLED{% else %}LIVE DISCOVERY DISABLED{% endif %}</h2>
+    </div>
+    <p>
+        Greenhouse uses read-only public job-board GET requests and is limited to {{ greenhouse_board_count }} explicitly configured employer board{{ greenhouse_board_count|pluralize }}.
+        {% if not live_discovery_enabled %}The local fixture remains available; selecting Greenhouse will fail safely without making a request.{% elif not greenhouse_board_count %}No Greenhouse board is configured, so the provider will fail safely.{% endif %}
+    </p>
+</section>
+
 <section class="stats-grid discovery-stats" aria-label="Discovery statistics">
     <article class="stat-card"><span>TOTAL FOUND</span><strong>{{ total_opportunities }}</strong></article>
     <article class="stat-card"><span>NEEDS ACTION</span><strong>{{ needs_action }}</strong></article>
@@ -52,10 +63,11 @@
 {% if opportunities %}
 <section class="discovery-grid">
     {% for opportunity in opportunities %}
-    <article class="panel discovery-card discovery-status-{{ opportunity.status }}">
+    <article class="panel discovery-card discovery-status-{{ opportunity.status }}{% if not opportunity.source_is_active %} discovery-source-closed{% endif %}">
         <div class="discovery-card-topline">
             <span class="discovery-status-badge">{{ opportunity.get_status_display|upper }}</span>
             <span class="discovery-relevance relevance-{{ opportunity.broad_relevance }}">{{ opportunity.get_broad_relevance_display|upper }}</span>
+            {% if opportunity.source_closed_at %}<span class="discovery-source-state">CLOSED AT SOURCE</span>{% endif %}
         </div>
         <div>
             <h2><a href="{% url 'job_discovery:opportunity_detail' opportunity.id %}">{{ opportunity.title_hint|default:"Untitled opportunity" }}</a></h2>
@@ -98,7 +110,13 @@
     <div class="discovery-run-list">
         {% for run in recent_runs %}
         <article>
-            <div><strong>{{ run.provider_label }}</strong><small>{{ run.provider_version }}</small></div>
+            <div>
+                <strong>{{ run.provider_label }}</strong>
+                <small>{{ run.provider_version }}</small>
+                {% for attempt in run.source_attempts.all %}
+                    <small class="source-attempt source-attempt-{{ attempt.status }}">{{ attempt.source_label }} · {{ attempt.get_status_display }} · {{ attempt.result_count }} result{{ attempt.result_count|pluralize }}{% if attempt.error_message %} · {{ attempt.error_message }}{% endif %}</small>
+                {% endfor %}
+            </div>
             <span>{{ run.get_status_display|upper }}</span>
             <span>{{ run.result_count }} result{{ run.result_count|pluralize }}</span>
             <span>{{ run.created_at|date:"M j, Y H:i" }}</span>
