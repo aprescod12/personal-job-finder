@@ -19,7 +19,8 @@ from tracker.models import CareerProfile, JobPosting
 from tracker.services.job_extraction import JobExtractionError
 from tracker.services.job_extraction_coordinator import extract_job_with_fallback
 
-from .models import DiscoveryRun, RawJobOpportunity
+from .greenhouse import GreenhouseDiscoveryProvider
+from .models import DiscoveryRun, DiscoverySourceAttempt, RawJobOpportunity
 from .providers import (
     DiscoveryProvider,
     DiscoveryQuery,
@@ -30,6 +31,7 @@ from .providers import (
 
 APPROVED_DISCOVERY_PROVIDERS: dict[str, type] = {
     FixtureDiscoveryProvider.key: FixtureDiscoveryProvider,
+    GreenhouseDiscoveryProvider.key: GreenhouseDiscoveryProvider,
 }
 
 
@@ -266,6 +268,7 @@ def _save_provider_results(
     results: Iterable[DiscoveredOpportunity],
 ):
     opportunities = []
+    now = timezone.now()
     for item in results:
         _validate_opportunity(item)
         duplicate = _duplicate_state(item, provider_key=provider.key)
@@ -300,9 +303,115 @@ def _save_provider_results(
                     if duplicate["blocking"]
                     else RawJobOpportunity.Status.NEW
                 ),
+                source_is_active=True,
+                source_last_seen_at=now,
             )
         )
     return opportunities
+
+
+def _source_reports(provider) -> list[dict]:
+    reports = getattr(provider, "source_reports", [])
+    if not reports:
+        return []
+    if not isinstance(reports, list) or not all(isinstance(item, dict) for item in reports):
+        raise DiscoveryProviderError(
+            "Provider source reports must be a list of structured records."
+        )
+    return reports
+
+
+def _persist_source_attempts(run: DiscoveryRun, reports: list[dict]):
+    allowed_statuses = {value for value, _ in DiscoverySourceAttempt.Status.choices}
+    attempts = []
+    for report in reports:
+        status = str(report.get("status", "")).strip()
+        source_key = str(report.get("source_key", "")).strip()
+        if status not in allowed_statuses or not source_key:
+            raise DiscoveryProviderError(
+                "Provider source reports need a valid source key and status."
+            )
+        attempts.append(
+            DiscoverySourceAttempt(
+                run=run,
+                source_key=source_key,
+                source_label=str(report.get("source_label", source_key)).strip(),
+                source_identifier=str(report.get("source_identifier", "")).strip(),
+                status=status,
+                result_count=max(0, int(report.get("result_count", 0) or 0)),
+                elapsed_ms=max(0, int(report.get("elapsed_ms", 0) or 0)),
+                error_message=str(report.get("error_message", "")).strip(),
+                metadata=dict(report.get("metadata", {}) or {}),
+            )
+        )
+    DiscoverySourceAttempt.objects.bulk_create(attempts)
+
+
+def _reconcile_live_source_state(
+    *,
+    run: DiscoveryRun,
+    provider: DiscoveryProvider,
+    reports: list[dict],
+):
+    """Update source activity only for employer boards fetched successfully."""
+
+    now = timezone.now()
+    for report in reports:
+        if report.get("status") != DiscoverySourceAttempt.Status.SUCCESS:
+            continue
+        source_key = str(report.get("source_key", "")).strip()
+        metadata = report.get("metadata", {}) or {}
+        current_ids = {
+            str(value).strip()
+            for value in metadata.get("external_ids", [])
+            if str(value).strip()
+        }
+        prior = RawJobOpportunity.objects.filter(
+            provider_key=provider.key,
+            provider_payload__board_key=source_key,
+        ).exclude(run=run)
+        if current_ids:
+            prior.filter(external_id__in=current_ids).update(
+                source_is_active=False,
+                source_last_seen_at=now,
+                source_closed_at=None,
+                updated_at=now,
+            )
+            missing = prior.exclude(external_id__in=current_ids)
+        else:
+            missing = prior
+        missing.filter(source_closed_at__isnull=True).update(
+            source_is_active=False,
+            source_closed_at=now,
+            updated_at=now,
+        )
+        RawJobOpportunity.objects.filter(
+            run=run,
+            provider_key=provider.key,
+            provider_payload__board_key=source_key,
+        ).update(
+            source_is_active=True,
+            source_last_seen_at=now,
+            source_closed_at=None,
+            updated_at=now,
+        )
+
+
+def _run_status_from_reports(reports: list[dict]):
+    if not reports:
+        return DiscoveryRun.Status.COMPLETED, ""
+    successes = [item for item in reports if item.get("status") == "success"]
+    failures = [item for item in reports if item.get("status") == "failed"]
+    error_message = "; ".join(
+        f"{item.get('source_label', item.get('source_key', 'source'))}: "
+        f"{item.get('error_message', 'failed')}"
+        for item in failures
+    )
+    if successes and failures:
+        return DiscoveryRun.Status.PARTIAL, error_message
+    if failures and not successes:
+        return DiscoveryRun.Status.FAILED, error_message
+    return DiscoveryRun.Status.COMPLETED, ""
 
 
 def run_discovery(
@@ -325,12 +434,19 @@ def run_discovery(
 
     try:
         results = tuple(provider.discover(query))
+        reports = _source_reports(provider)
         with transaction.atomic():
             opportunities = _save_provider_results(
                 run=run,
                 provider=provider,
                 query=query,
                 results=results,
+            )
+            _persist_source_attempts(run, reports)
+            _reconcile_live_source_state(
+                run=run,
+                provider=provider,
+                reports=reports,
             )
     except Exception as exc:
         run.status = DiscoveryRun.Status.FAILED
@@ -341,7 +457,7 @@ def run_discovery(
             raise
         raise DiscoveryProviderError(str(exc)) from exc
 
-    run.status = DiscoveryRun.Status.COMPLETED
+    run.status, run.error_message = _run_status_from_reports(reports)
     run.result_count = len(opportunities)
     run.new_count = sum(
         item.status == RawJobOpportunity.Status.NEW for item in opportunities
@@ -361,6 +477,7 @@ def run_discovery(
             "new_count",
             "duplicate_count",
             "outside_preference_count",
+            "error_message",
             "completed_at",
         ]
     )
