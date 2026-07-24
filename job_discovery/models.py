@@ -229,11 +229,17 @@ class RawJobOpportunity(models.Model):
 
     @property
     def can_send_to_processing(self):
-        return self.status in {
-            self.Status.NEW,
-            self.Status.READY,
-            self.Status.PROCESSING_FAILED,
-        } and (not self.has_blocking_duplicate or self.duplicate_override)
+        return (
+            self.source_is_active
+            and self.source_closed_at is None
+            and self.status
+            in {
+                self.Status.NEW,
+                self.Status.READY,
+                self.Status.PROCESSING_FAILED,
+            }
+            and (not self.has_blocking_duplicate or self.duplicate_override)
+        )
 
     def __str__(self):
         title = self.title_hint or "Untitled opportunity"
