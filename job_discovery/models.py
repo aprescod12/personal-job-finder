@@ -12,6 +12,7 @@ class DiscoveryRun(models.Model):
         PENDING = "pending", "Pending"
         RUNNING = "running", "Running"
         COMPLETED = "completed", "Completed"
+        PARTIAL = "partial", "Partially completed"
         FAILED = "failed", "Failed"
 
     provider_key = models.CharField(max_length=80)
@@ -58,6 +59,46 @@ class DiscoveryRun(models.Model):
 
     def __str__(self):
         return f"{self.provider_label} discovery at {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class DiscoverySourceAttempt(models.Model):
+    class Status(models.TextChoices):
+        SUCCESS = "success", "Success"
+        FAILED = "failed", "Failed"
+        SKIPPED = "skipped", "Skipped"
+
+    run = models.ForeignKey(
+        DiscoveryRun,
+        on_delete=models.CASCADE,
+        related_name="source_attempts",
+    )
+    source_key = models.CharField(max_length=100)
+    source_label = models.CharField(max_length=200)
+    source_identifier = models.CharField(max_length=300, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices)
+    result_count = models.PositiveIntegerField(default=0)
+    elapsed_ms = models.PositiveIntegerField(default=0)
+    error_message = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["source_label", "source_key"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["run", "source_key"],
+                name="disc_source_run_key_unique",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=["status", "-created_at"],
+                name="disc_source_status_idx",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.source_label}: {self.get_status_display()}"
 
 
 class RawJobOpportunity(models.Model):
@@ -137,6 +178,9 @@ class RawJobOpportunity(models.Model):
         related_name="discovery_sources",
     )
 
+    source_is_active = models.BooleanField(default=True)
+    source_last_seen_at = models.DateTimeField(default=timezone.now)
+    source_closed_at = models.DateTimeField(null=True, blank=True)
     discovered_at = models.DateTimeField(default=timezone.now)
     sent_to_processing_at = models.DateTimeField(null=True, blank=True)
     processed_at = models.DateTimeField(null=True, blank=True)
@@ -162,6 +206,10 @@ class RawJobOpportunity(models.Model):
                 fields=["raw_text_sha256"],
                 name="disc_opp_text_idx",
             ),
+            models.Index(
+                fields=["provider_key", "source_is_active"],
+                name="disc_opp_active_idx",
+            ),
         ]
 
     def clean(self):
@@ -181,11 +229,17 @@ class RawJobOpportunity(models.Model):
 
     @property
     def can_send_to_processing(self):
-        return self.status in {
-            self.Status.NEW,
-            self.Status.READY,
-            self.Status.PROCESSING_FAILED,
-        } and (not self.has_blocking_duplicate or self.duplicate_override)
+        return (
+            self.source_is_active
+            and self.source_closed_at is None
+            and self.status
+            in {
+                self.Status.NEW,
+                self.Status.READY,
+                self.Status.PROCESSING_FAILED,
+            }
+            and (not self.has_blocking_duplicate or self.duplicate_override)
+        )
 
     def __str__(self):
         title = self.title_hint or "Untitled opportunity"

@@ -1,5 +1,6 @@
 """Django settings for the personal job finder."""
 
+import json
 import os
 from pathlib import Path
 
@@ -25,6 +26,28 @@ def _env_positive_int(name: str, default: int) -> int:
     except ValueError:
         return default
     return value if value > 0 else default
+
+
+def _env_nonnegative_int(name: str, default: int) -> int:
+    raw_value = os.getenv(name, "").strip()
+    if not raw_value:
+        return default
+    try:
+        value = int(raw_value)
+    except ValueError:
+        return default
+    return value if value >= 0 else default
+
+
+def _env_json_list(name: str) -> list:
+    raw_value = os.getenv(name, "").strip()
+    if not raw_value:
+        return []
+    try:
+        value = json.loads(raw_value)
+    except json.JSONDecodeError:
+        return []
+    return value if isinstance(value, list) else []
 
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "development-only-not-for-production")
@@ -68,7 +91,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
             ],
         },
-    },
+    }
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
@@ -179,4 +202,36 @@ OPENAI_RESUME_EXTRACTION_MAX_INPUT_CHARS = _env_positive_int(
 OPENAI_RESUME_EXTRACTION_REASONING_EFFORT = (
     os.getenv("OPENAI_RESUME_EXTRACTION_REASONING_EFFORT", "low").strip()
     or "low"
+)
+
+# Stage 6 live discovery is disabled by default. Greenhouse GET job-board data
+# is public, but network access still requires a deliberate switch and a curated
+# list of employer board tokens. No application-submission endpoint is used.
+JOB_DISCOVERY_LIVE_ENABLED = _env_bool(
+    "JOB_DISCOVERY_LIVE_ENABLED",
+    default=False,
+)
+GREENHOUSE_DISCOVERY_BOARDS = _env_json_list("GREENHOUSE_DISCOVERY_BOARDS")
+GREENHOUSE_DISCOVERY_TIMEOUT_SECONDS = _env_positive_int(
+    "GREENHOUSE_DISCOVERY_TIMEOUT_SECONDS",
+    10,
+)
+GREENHOUSE_DISCOVERY_RETRY_COUNT = min(
+    _env_nonnegative_int("GREENHOUSE_DISCOVERY_RETRY_COUNT", 1),
+    2,
+)
+GREENHOUSE_DISCOVERY_MAX_BOARDS = _env_positive_int(
+    "GREENHOUSE_DISCOVERY_MAX_BOARDS",
+    5,
+)
+GREENHOUSE_DISCOVERY_MAX_JOBS_PER_BOARD = _env_positive_int(
+    "GREENHOUSE_DISCOVERY_MAX_JOBS_PER_BOARD",
+    100,
+)
+GREENHOUSE_DISCOVERY_USER_AGENT = (
+    os.getenv(
+        "GREENHOUSE_DISCOVERY_USER_AGENT",
+        "AmirisJobFinder/1.0 controlled-discovery",
+    ).strip()
+    or "AmirisJobFinder/1.0 controlled-discovery"
 )

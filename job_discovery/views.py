@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import messages
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -21,6 +22,16 @@ STATUS_FILTERS = (
     ("", "All inbox states"),
     *RawJobOpportunity.Status.choices,
 )
+
+
+def _configured_greenhouse_board_count():
+    boards = getattr(settings, "GREENHOUSE_DISCOVERY_BOARDS", [])
+    if not isinstance(boards, (list, tuple)):
+        return 0
+    return sum(
+        isinstance(item, dict) and item.get("enabled", True)
+        for item in boards
+    )
 
 
 def discovery_inbox(request):
@@ -54,7 +65,7 @@ def discovery_inbox(request):
         {
             "run_form": DiscoveryRunForm(),
             "opportunities": opportunities[:100],
-            "recent_runs": DiscoveryRun.objects.all()[:8],
+            "recent_runs": DiscoveryRun.objects.prefetch_related("source_attempts")[:8],
             "status_filters": STATUS_FILTERS,
             "selected_status": selected_status,
             "counts": counts,
@@ -62,6 +73,10 @@ def discovery_inbox(request):
             "needs_action": needs_action,
             "duplicate_count": counts.get(RawJobOpportunity.Status.DUPLICATE, 0),
             "processed_count": counts.get(RawJobOpportunity.Status.PROCESSED, 0),
+            "live_discovery_enabled": bool(
+                getattr(settings, "JOB_DISCOVERY_LIVE_ENABLED", False)
+            ),
+            "greenhouse_board_count": _configured_greenhouse_board_count(),
         },
     )
 
@@ -78,14 +93,23 @@ def run_discovery_view(request):
     except DiscoveryError as exc:
         messages.error(request, f"Discovery run failed safely: {exc}")
     else:
-        messages.success(
-            request,
-            (
-                f"Discovery completed: {run.result_count} result"
-                f"{'s' if run.result_count != 1 else ''}, "
-                f"{run.new_count} new and {run.duplicate_count} duplicate."
-            ),
+        summary = (
+            f"{run.result_count} result"
+            f"{'s' if run.result_count != 1 else ''}, "
+            f"{run.new_count} new and {run.duplicate_count} duplicate."
         )
+        if run.status == DiscoveryRun.Status.PARTIAL:
+            messages.warning(
+                request,
+                f"Discovery partially completed: {summary} Some approved sources failed and were recorded.",
+            )
+        elif run.status == DiscoveryRun.Status.FAILED:
+            messages.error(
+                request,
+                "Discovery sources failed safely. No successful employer-board result was available.",
+            )
+        else:
+            messages.success(request, f"Discovery completed: {summary}")
     return redirect("job_discovery:inbox")
 
 
